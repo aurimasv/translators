@@ -250,22 +250,27 @@ function isPart(node) {
 	return skip;
 }
 
+function getContainers(node) {
+	var isPartOf = getFirstResults(node, [n.dcterms+"isPartOf"]);
+	if(!isPartOf) return;
+
+	var containers = [], c;
+	for(var i=0, k=isPartOf.length; i<k; i++) {
+		containers.push(isPartOf[i]);
+		//check if this is also part of something else
+		c = getContainers(isPartOf[i]);
+		if(c) containers = containers.concat(c);
+	}
+
+	return containers;		
+}
+
 function detectType(newItem, node, ret) {
 	if(!node) return false;
 	
 	// also deal with type detection based on parts, so we can differentiate
 	// magazine and journal articles, and find container elements
-	var isPartOf = getFirstResults(node, [n.dcterms+"isPartOf"]);
-	
-	// get parts of parts, because parts are sections of wholes.
-	if(isPartOf) {
-		for(var i=0; i<isPartOf.length; i++) {
-			var subParts = getFirstResults(isPartOf[i], [n.dcterms+"isPartOf"]);
-			if(subParts) {
-				isPartOf = isPartOf.concat(subParts);
-			}
-		}
-	}
+	var isPartOf = getContainers(node);
 	
 	var container;
 	var t = new Object();
@@ -565,7 +570,7 @@ function detectType(newItem, node, ret) {
 			t.prismGuess = 'webpage';
 		break;
 	}
-
+Z.debug(t);
 	var itemType = t.zotero || t.bib || t.prism || t.og || t.dc ||
 		exports.defaultUnknownType || t.zoteroGuess || t.bibGuess || 
 		t.prismGuess || t.ogGuess || t.dcGuess
