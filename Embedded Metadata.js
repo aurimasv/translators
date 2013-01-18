@@ -9,6 +9,15 @@
 	"inRepository": true,
 	"translatorType": 4,
 	"browserSupport": "gcsib",
+	"hiddenPrefs": {
+		"_defaultKey": "test",
+		"test": {
+			"hello": "what's up",
+			"bye": ":-)"
+		},
+		"test2": {
+			"something": "not"
+		}},
 	"lastUpdated": "2012-12-10 23:37:54"
 }
 
@@ -181,6 +190,18 @@ function completeItem(doc, newItem) {
 }
 
 function detectWeb(doc, url) {
+Zotero.debug('testing prefs');
+var p1 = Zotero.getPref('hello');
+var p2 = Zotero.getPref('bye');
+var p3 = Zotero.getPref('something', 'test2');
+var p4 = Zotero.getPref('exists', 'test3');
+var p5 = Zotero.getPref('dne', 'test3');
+Z.debug(p1);
+Z.debug(p2);
+Z.debug(p3);
+Z.debug(p4);
+Z.debug(ZU.varDump(p5));
+Z.debug('done');
 	if(exports.itemType) return exports.itemType;
 
 	init(doc, url, Zotero.done);

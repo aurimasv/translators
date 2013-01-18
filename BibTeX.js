@@ -18,46 +18,1136 @@
 	"lastUpdated": "2012-12-20 09:36:51"
 }
 
+/**
+ * ReadBuffer object
+ * object for reading input streams with ability to push back and peek
+ */
+var ReadBuffer = function() {
+	this._buffer = '';
+};
+
+//read a single line
+ReadBuffer.prototype.readLine = function() {
+	var lfIndex = this._buffer.indexOf('\n');
+	var lineEnd, line;
+	//find first LF (with optional CR)
+	if(lfIndex != -1) {
+		lineEnd = lfIndex;
+		if(lfIndex != 0 && this._buffer[lfIndex-1] == '\r') {
+			lfIndex--;
+		}
+	}
+
+	//if no LF, look for CR
+	if(lfIndex == -1) lfIndex = this._buffer.indexOf('\r');
+	
+	if(lfIndex != -1) {
+		line = this._buffer.substring(0,lfIndex);
+		this._buffer = this._buffer.substring(lineEnd+1);
+		return line;
+	}
+
+	//if no CR or LF, get a new line from Zotero.read() and prepend whatever we had in the buffer
+	line = Zotero.read();
+	if(line === false && !this._buffer) return false;
+
+	if(!line) line = '';
+
+	line = this._buffer + line;
+	this._buffer = '';
+
+	return line;
+};
+
+//read chars number of bytes
+ReadBuffer.prototype.read = function(chars) {
+	if(chars === undefined) return this.readLine();
+
+	var str;
+	if(chars < this._buffer.length) {
+		str = this._buffer.substring(0, chars);
+		this._buffer = this._buffer.substring(chars);
+		return str;
+	}
+
+	str = this._buffer;
+	this._buffer = '';
+	chars -= str.length;
+
+	if(chars) {
+		var moreStr = Zotero.read(chars);
+		if(moreStr === false && str === '') return false;
+		str += moreStr || '';
+	}
+
+	return str;
+};
+
+//push a string back onto the buffer
+ReadBuffer.prototype.push = function(str) {
+	this._buffer = str + this._buffer;
+};
+
+//push a back a line without having to add /r/n
+//note that we can't be sure if the original line ended in /r, /n, or /r/n
+ReadBuffer.prototype.pushLine = function(str) {
+	this.push(str + '\r\n');
+};
+
+//peek into the next chars number of bytes without advancing the index
+/**TODO: this can probably be more efficient**/
+ReadBuffer.prototype.peek = function(chars) {
+	var str = this.readLine(chars);
+
+	if(str === false) return false;
+
+	if(chars === undefined) this.pushLine(str);
+	else this.push(str);
+
+	return str;
+};
+
+/** END ReadBuffer **/
+
+var fileReader = new ReadBuffer();
+
+/** BEGIN: Utility functions **/
+
+//consume all characters up to the first bibtex entry or the number of specified characters
+function clearComments(maxChars) {
+	var readAtOnce = 4096;
+	var read = 0;
+	if(maxChars && maxChars < readAtOnce) readAtOnce = maxChars;
+	var buffer = '';
+	var str, entryStart = -1;
+	var re = /^[ \t]*@[a-zA-Z]+[\(\{]/m;
+	while(readAtOnce && (str = fileReader.read(readAtOnce)) !== false) {
+		buffer += str;
+		read += str.length;
+
+		if(buffer.indexOf('@') == -1 || (entryStart = buffer.search(re)) == -1) {
+			buffer = buffer.substring(buffer.lastIndexOf('\n')+1)
+										.substring(buffer.lastIndexOf('\r')+1);
+		} else {
+			break;
+		}
+
+		if(maxChars && maxChars < (read + readAtOnce)) {
+			readAtOnce = maxChars - read;	//this will end up 0 if we reach maxChars
+		}
+	}
+
+	//no entry found
+	if(entryStart == -1) {
+		if(str === false) {	//nothing left to read
+			if(maxChars) return maxChars;
+			else return read;
+		} else {	//we reached maxChars. we need to push back the last line
+			fileReader.push(buffer);
+			return maxChars;
+		}
+	}
+		
+	buffer = buffer.substring(entryStart).replace(/^[^@]+/,'');
+	fileReader.push(buffer);
+
+	return read - buffer.length;	//return bytes consumed
+}
+
+/** END: Utility functions **/
+
+/** BEGIN: detectImport **/
 function detectImport() {
-	var maxChars = 1048576; // 1MB
+	var maxChars = 1024 * 1024; // 1MB
 	
-	var inComment = false;
-	var block = "";
-	var buffer = "";
-	var chr = "";
-	var charsRead = 0;
-	
-	var re = /^\s*@[a-zA-Z]+[\(\{]/;
-	while((buffer = Zotero.read(4096)) && charsRead < maxChars) {
-		Zotero.debug("Scanning " + buffer.length + " characters for BibTeX");
-		charsRead += buffer.length;
-		for (var i=0; i<buffer.length; i++) {
-			chr = buffer[i];
-			
-			if (inComment && chr != "\r" && chr != "\n") {
+	if(clearComments(maxChars) != maxChars) {
+		return true;
+	}
+}
+
+/** END: detectImport **/
+
+/** BEGIN: doImport **/
+var strings = {};
+var keyRe = /[a-zA-Z0-9\-]/;
+
+function processField(item, field, value) {
+	if(Zotero.Utilities.trim(value) == '') return null;
+	if(fieldMap[field]) {
+		item[fieldMap[field]] = value;
+	} else if(inputFieldMap[field]) {
+		item[inputFieldMap[field]] = value;
+	} else if(field == "journal") {
+		if(item.publicationTitle) {
+			item.journalAbbreviation = value;
+		} else {
+			item.publicationTitle = value;
+		}
+	} else if(field == "fjournal") {
+		if(item.publicationTitle) {
+			// move publicationTitle to abbreviation
+			item.journalAbbreviation = value;
+		}
+		item.publicationTitle = value;
+	} else if(field == "author" || field == "editor" || field == "translator") {
+		// parse authors/editors/translators
+		var names = value.split(/ and /i); // now case insensitive
+		for(var i in names) {
+			var name = names[i];
+			// skip empty names
+			if (name.trim() == '') {
 				continue;
 			}
-			inComment = false;
-			
-			if(chr == "%") {
-				// read until next newline
-				block = "";
-				inComment = true;
-			} else if((chr == "\n" || chr == "\r"
-				// allow one-line entries
-						|| i == (buffer.length - 1))
-						&& block) {
-				// check if this is a BibTeX entry
-				if(re.test(block)) {
-					return true;
-				}
-				
-				block = "";
-			} else if(" \n\r\t".indexOf(chr) == -1) {
-				block += chr;
+			// Names in BibTeX can have three commas
+			pieces = name.split(',');
+			var creator = {};
+			if (pieces.length > 1) {
+				creator.firstName = pieces.pop().trim();
+				creator.lastName = pieces.join(',').trim();
+				creator.creatorType = field;
+			} else {
+				creator = Zotero.Utilities.cleanAuthor(name, field, false);
+			}
+			item.creators.push(creator);
+		}
+	} else if(field == "institution" || field == "organization") {
+		item.backupPublisher = value;
+	} else if(field == "number"){ // fix for techreport
+		if (item.itemType == "report") {
+			item.reportNumber = value;
+		} else if (item.itemType == "book" || item.itemType == "bookSection") {
+			item.seriesNumber = value;
+		} else if (item.itemType == "patent"){
+			item.patentNumber = value;
+		} else {
+			item.issue = value;
+		}
+	} else if(field == "month") {
+		var monthIndex = months.indexOf(value.toLowerCase());
+		if(monthIndex != -1) {
+			value = Zotero.Utilities.formatDate({month:monthIndex});
+		} else {
+			value += " ";
+		}
+		
+		if(item.date) {
+			if(value.indexOf(item.date) != -1) {
+				// value contains year and more
+				item.date = value;
+			} else {
+				item.date = value+item.date;
+			}
+		} else {
+			item.date = value;
+		}
+	} else if(field == "year") {
+		if(item.date) {
+			if(item.date.indexOf(value) == -1) {
+				// date does not already contain year
+				item.date += value;
+			}
+		} else {
+			item.date = value;
+		}
+	} else if(field == "pages") {
+		if (item.itemType == "book" || item.itemType == "thesis" || item.itemType == "manuscript") {
+			item.numPages = value;
+		}
+		else {
+			item.pages = value.replace(/--/g, "-");
+		}
+	} else if(field == "note") {
+		item.extra += "\n"+value;
+	} else if(field == "howpublished") {
+		if(value.length >= 7) {
+			var str = value.substr(0, 7);
+			if(str == "http://" || str == "https:/" || str == "mailto:") {
+				item.url = value;
+			} else {
+				item.extra += "\nPublished: "+value;
+			}
+		}
+	
+	} 
+	//accept lastchecked or urldate for access date. These should never both occur. 
+	//If they do we don't know which is better so we might as well just take the second one
+	else if (field == "lastchecked"|| field == "urldate"){
+		item.accessDate = value;
+	}
+	else if(field == "keywords" || field == "keyword") {
+		var re = new RegExp(keywordDelimRe, keywordDelimReFlags);
+		if(!value.match(re) && keywordSplitOnSpace) {
+			// keywords/tags
+			item.tags = value.split(/\s+/);
+		} else {
+			item.tags = value.split(re);
+		}
+	} else if (field == "comment" || field == "annote" || field == "review") {
+		item.notes.push({note:Zotero.Utilities.text2html(value)});
+	} else if (field == "pdf") {
+		item.attachments = [{path:value, mimeType:"application/pdf"}];
+	} else if (field == "sentelink") { // the reference manager 'Sente' has a unique file scheme in exported BibTeX
+		item.attachments = [{path:value.split(",")[0], mimeType:"application/pdf"}];
+	} else if (field == "file") {
+		var attachments = value.split(";");
+		for(var i in attachments){
+			var attachment = attachments[i];
+			var parts = attachment.split(":");
+			var filetitle = parts[0];
+			var filepath = parts[1];
+			if (filepath.trim() === '') continue; // skip empty entries
+			var filetype = parts[2];
+			if (filetitle.length == 0) {
+				filetitle = "Attachment";
+			}
+			if (filetype.match(/pdf/i)) {
+				item.attachments.push({path:filepath, mimeType:"application/pdf", title:filetitle});
+			} else {
+				item.attachments.push({path:filepath, title:filetitle});
 			}
 		}
 	}
+}
+
+function getFieldValue(read) {
+	var value = "";
+	// now, we have the first character of the field
+	if(read == "{") {
+		// character is a brace
+		var openBraces = 1;
+		while(read = Zotero.read(1)) {
+			if(read == "{" && value[value.length-1] != "\\") {
+				openBraces++;
+				value += "{";
+			} else if(read == "}" && value[value.length-1] != "\\") {
+				openBraces--;
+				if(openBraces == 0) {
+					break;
+				} else {
+					value += "}";
+				}
+			} else {
+				value += read;
+			}
+		}
+		
+	} else if(read == '"') {
+		var openBraces = 0;
+		while(read = Zotero.read(1)) {
+			if(read == "{" && value[value.length-1] != "\\") {
+				openBraces++;
+				value += "{";
+			} else if(read == "}" && value[value.length-1] != "\\") {
+				openBraces--;
+				value += "}";
+			} else if(read == '"' && openBraces == 0) {
+				break;
+			} else {
+				value += read;
+			}
+		}
+	}
+	
+	if(value.length > 1) {
+		// replace accented characters (yucky slow)
+		value = value.replace(/{?(\\[`"'^~=a-z]){?\\?([A-Za-z])}/g, "{$1$2}");
+		//convert tex markup into permitted HTML
+		value = mapTeXmarkup(value);
+		for (var mapped in reversemappingTable) { // really really slow!
+			var unicode = reversemappingTable[mapped];
+			while(value.indexOf(mapped) !== -1) {
+				Zotero.debug("Replace " + mapped + " in " + value + " with " + unicode);
+				value = value.replace(mapped, unicode);
+			}
+			mapped = mapped.replace(/[{}]/g, "");
+			while(value.indexOf(mapped) !== -1) {
+				//Z.debug(value)
+				Zotero.debug("Replace(2) " + mapped + " in " + value + " with " + unicode);
+				value = value.replace(mapped, unicode);
+			}
+		}
+		
+		// kill braces
+		value = value.replace(/([^\\])[{}]+/g, "$1");
+		if(value[0] == "{") {
+			value = value.substr(1);
+		}
+		
+		// chop off backslashes
+		value = value.replace(/([^\\])\\([#$%&~_^\\{}])/g, "$1$2");
+		value = value.replace(/([^\\])\\([#$%&~_^\\{}])/g, "$1$2");
+		if(value[0] == "\\" && "#$%&~_^\\{}".indexOf(value[1]) != -1) {
+			value = value.substr(1);
+		}
+		if(value[value.length-1] == "\\" && "#$%&~_^\\{}".indexOf(value[value.length-2]) != -1) {
+			value = value.substr(0, value.length-1);
+		}
+		value = value.replace(/\\\\/g, "\\");
+		value = value.replace(/\s+/g, " ");
+	}
+
+	return value;
+}
+
+function beginRecord(type, closeChar) {
+	type = Zotero.Utilities.trimInternal(type.toLowerCase());
+	if(type != "string") {
+		var zoteroType = bibtex2zoteroTypeMap[type];
+		if (!zoteroType) {
+			Zotero.debug("discarded item from BibTeX; type was "+type);
+			return;
+		}
+		var item = new Zotero.Item(zoteroType);
+		
+		item.extra = "";
+	}
+	
+	var field = "";
+	
+	// by setting dontRead to true, we can skip a read on the next iteration
+	// of this loop. this is useful after we read past the end of a string.
+	var dontRead = false;
+	
+	while(dontRead || (read = Zotero.read(1))) {
+		dontRead = false;
+		
+		if(read == "=") {								// equals begin a field
+		// read whitespace
+			var read = Zotero.read(1);
+			while(" \n\r\t".indexOf(read) != -1) {
+				read = Zotero.read(1);
+			}
+			
+			if(keyRe.test(read)) {
+				// read numeric data here, since we might get an end bracket
+				// that we should care about
+				value = "";
+				value += read;
+				
+				// character is a number
+				while((read = Zotero.read(1)) && keyRe.test(read)) {
+					value += read;
+				}
+				
+				// don't read the next char; instead, process the character
+				// we already read past the end of the string
+				dontRead = true;
+				
+				// see if there's a defined string
+				if(strings[value]) value = strings[value];
+			} else {
+				var value = getFieldValue(read);
+			}
+			
+			if(item) {
+				processField(item, field.toLowerCase(), value);
+			} else if(type == "string") {
+				strings[field] = value;
+			}
+			field = "";
+		} else if(read == ",") {						// commas reset
+			field = "";
+		} else if(read == closeChar) {
+			if(item) {
+				if(item.extra) item.extra = item.extra.substr(1); // chop \n
+				item.complete();
+			}
+			return;
+		} else if(" \n\r\t".indexOf(read) == -1) {		// skip whitespace
+			field += read;
+		}
+	}
+}
+
+var balance = {
+	'{': '}',
+	'(': ')',
+	'"': '"'
+};
+
+var whitespace = ' \t\r\n';
+var strings;
+var placeholderRE = /[a-za-Z0-9][a-zA-Z_0-9]*/;
+
+function consumeWhiteSpace() {
+	var c = fileReader.read(1);
+	while(c && whitespace.indexOf(c) != -1) {
+		c = fileReader.read(1);
+	}
+	if(c !== false) fileReader.push(c);
+}
+
+function getValue(field, type, openingChar) {
+	consumeWhiteSpace();
+	var oc = fileReader.read(1);	//opening character for a field
+	if(!oc) return false;
+	if(placeholderRE.test(oc)) {	//this means we're either reading an integer or a string reference
+		fileReader.push(oc);
+		oc = false;
+	} else if(oc != '"' && oc != '{') {
+		// unexpected character
+		/** TODO: handle this **/
+	}
+
+	var c = fileReader.read(1);
+	var value = new Value(), part;
+	var str = ''
+	var breakWhile = false;
+	while(c) {
+		if(!oc) {
+			if(!placeholderRE.test(c)) {	//end of placeholder
+				fileReader.push(c);
+				break;
+			}
+			str += c;
+		} else if(c == balance[oc] || c == balance[openingChar]) {
+			fileReader.push(c);
+			break;
+		} else {
+			part = nextValuePart(field, [balance[openingChar], balance[oc]]);
+			if(!part) break;
+			value.addPart(part);
+		}
+		c = fileReader.read(1);
+	}
+	
+	if(!oc) {
+		if(str.search(/^[0-9]+$/) != -1) {	//integer
+			value.addLiteral(str);
+		} else if(str = strings[str.toLowerCase()]) {
+			value.addLiteral(str);
+		}
+	}
+	
+	consumeWhiteSpace();
+	c = fileReader.read(1);
+	if(c == '#') {	//concatenate string
+		value.concat(getValue(field, type, openingChar));
+	} else if(c) {
+		fileReader.push(c);	//put it back
+	}
+
+	return value;
+}
+
+function processEntry() {
+	var buffer = fileReader.readLine();
+	if(buffer === false) return;
+
+	//get item type
+	var type = buffer.match(/^[A-Za-z]+/);	//@ has already been consumed
+	if(!type) return;
+
+	buffer = buffer.substring(type[0].length).replace(/^\s+/,'');
+	type = type[0].toLowerCase();
+	if(type == 'comment' || type == 'preamble') return;
+
+	var zoteroType = (type == 'string' ? type : bibtex2zoteroTypeMap[type]);
+	if (!zoteroType) {
+		Zotero.debug("Discarded item from BibTeX; type was "+type);
+		return;
+	}
+
+	//get opening brace (does this have to be on the same line? It currently does)
+	var openingChar = buffer[0];
+	if(openingChar != '{' || openingChar != '(') return;
+
+	//next is either the key or a field name (for strings). We allow empty keys, but not empty field names
+	var m = buffer.match(/^.\s*([-A-Za-z0-9_]*)\s*([,=])\s*/);
+	if(!m) return;
+
+	buffer = buffer.substring(m[0].length);
+
+	if(m[2] == '=') {
+		//this has to be a string declaration
+		if(type != 'string') return;
+
+		fileReader.pushLine(buffer);
+		var value = getValue(m[1], type, openingChar);
+		if(value != false) strings[m[1].toLowerCase()] = value;
+		return;
+	}
+
+	var entry = {};
+	entry._key = m[1];
+	entry._type = type;
+	entry._zType = zoteroType;
+
+	fileReader.pushLine(buffer);
+
+	//read field value pairs until we reach closing brace
+	consumeWhiteSpace();
+	var c = fileReader.peek(1), value;
+	while(c && c != balance[openingChar]) {
+		//get field name
+		buffer = fileReader.readLine();
+		m = buffer.match(/^([-A-Za-z0-9_]*)\s*=\s*/);
+		if(!m) break;
+		
+		fileReader.pushLine(buffer.substring(m[0].length));
+		
+		//get value
+		value = getValue(m[1], type, openingChar);
+		if(value == false) break;
+		addValue(entry, value);
+		
+		consumeWhiteSpace();
+		c = fileReader.peek(1);
+	}
+	
+	if(c == balance[openingChar]) fileReader.read(1);	//consume closing brace
+
+	finalizeEntry(entry);
+}
+	// by setting dontRead to true, we can skip a read on the next iteration
+	// of this loop. this is useful after we read past the end of a string.
+	var dontRead = false;
+	
+	while(dontRead || (read = Zotero.read(1))) {
+		dontRead = false;
+		
+		if(read == "=") {								// equals begin a field
+		// read whitespace
+			var read = Zotero.read(1);
+			while(" \n\r\t".indexOf(read) != -1) {
+				read = Zotero.read(1);
+			}
+			
+			if(keyRe.test(read)) {
+				// read numeric data here, since we might get an end bracket
+				// that we should care about
+				value = "";
+				value += read;
+				
+				// character is a number
+				while((read = Zotero.read(1)) && keyRe.test(read)) {
+					value += read;
+				}
+				
+				// don't read the next char; instead, process the character
+				// we already read past the end of the string
+				dontRead = true;
+				
+				// see if there's a defined string
+				if(strings[value]) value = strings[value];
+			} else {
+				var value = getFieldValue(read);
+			}
+			
+			if(item) {
+				processField(item, field.toLowerCase(), value);
+			} else if(type == "string") {
+				strings[field] = value;
+			}
+			field = "";
+		} else if(read == ",") {						// commas reset
+			field = "";
+		} else if(read == closeChar) {
+			if(item) {
+				if(item.extra) item.extra = item.extra.substr(1); // chop \n
+				item.complete();
+			}
+			return;
+		} else if(" \n\r\t".indexOf(read) == -1) {		// skip whitespace
+			field += read;
+		}
+	}
+}
+
+function doImport() {
+	strings = {};
+	clearComments();
+	var at = fileReader.read(1);
+
+	while(at == '@') {
+		processEntry();
+		clearComments();
+		at = fileReader.read(1);
+	}
+}
+
+/** END: doImport **/
+
+// some fields are, in fact, macros.  If that is the case then we should not put the
+// data in the braces as it will cause the macros to not expand properly
+function writeField(field, value, isMacro) {
+	if (!value && typeof value != "number") return;
+	value = value + ""; // convert integers to strings
+	Zotero.write(",\n\t" + field + " = ");
+	if (!isMacro) Zotero.write("{");
+	// url field is preserved, for use with \href and \url
+	// Other fields (DOI?) may need similar treatment
+	if (!isMacro && !(field == "url" || field == "doi" || field == "file" || field == "lccn")) {
+		//var titleCase = isTitleCase(value);	//figure this out before escaping all the characters
+		// I hope these are all the escape characters! (except for < > which are handled later)
+		value = value.replace(/[|\~\^\\\{\}]/g, mapEscape).replace(/[\#\$\%\&\_]/g, "\\$&");
+		//convert the HTML markup allowed in Zotero for rich text to TeX
+		value = mapHTMLmarkup(value);
+		//escape < > if mapHTMLmarkup did not convert some
+		value = value.replace(/[<>]/g, mapEscape);
+		
+		/*
+		if (field == "title" || field == "type" || field == "shorttitle" || field == "booktitle" || field == "series") {
+			if (!titleCase) {
+				//protect caps for everything but the first letter
+					value = value.replace(/(.)([A-Z]+)/g, "$1{$2}");
+			} else {	//protect all-caps vords and initials
+				value = value.replace(/([\s.->])([A-Z]+)(?=\.)/g, "$1{$2}");	//protect initials
+				if(value.toUpperCase() != value) value = value.replace(/([\s>])([A-Z]{2,})(?=[\.,\s<]|$)/g, "$1{$2}");
+			}
+		}
+		*/	
+			
+		// Case of words with uppercase characters in non-initial positions is preserved with braces.
+		// treat hyphen as whitespace for this purpose so that Large-scale etc. don't get enclosed
+		// treat curly bracket as whitespace because of mark-up immediately preceding word
+		// treat opening parentheses &brackets as whitespace	
+		 if (field != "pages") {
+			value = value .replace(/[^\s-\}\{\(\[]+[A-Z][^\s,]*/g, "{$&}");
+		}
+	}
+
+	if (Zotero.getOption("exportCharset") != "UTF-8") {
+		value = value.replace(/[\u0080-\uFFFF]/g, mapAccent);
+	}
+
+	Zotero.write(value);
+	if (!isMacro) Zotero.write("}");
+}
+
+function mapHTMLmarkup(characters) {
+	//convert string to DOM
+	var dom = (new DOMParser()).parseFromString(characters, 'text/html');
+	return DOMtoTeX(dom.body);
+}
+
+
+var HTMLtoTeXMap = {
+	i: {
+		open: "\\textit{",
+		close: "}"
+	},
+	b: {
+		open: "\\textbf{",
+		close: "}"
+	},
+	sup: {
+		open: "\$^{\\textrm{",
+		close: "}}\$"
+	},
+	sub: {
+		open: "\$_{\\textrm{",
+		close: "}}\$"
+	},
+	span: {
+		open: "\\textsc{",
+		close: "}"
+	},
+	sc: {
+		open: "\\textsc{",
+		close: "}"
+	}
+}
+
+function DOMtoTeX(element) {
+	
+	
+	
+	var str = "";
+	var node = element.firstChild;
+	if(!node) return str;
+
+	do {
+		var nodeName = node.nodeName.toLowerCase();
+		//nodes we can handle
+		if(HTMLtoTeXMap[nodeName]) {
+			//span element must have style="small-caps"
+			if(nodeName != 'span'
+				|| (node.style && node.style.fontVariant == 'small-caps')) {
+				str += HTMLtoTeXMap[nodeName].open
+							+ DOMtoTeX(node)
+							+ HTMLtoTeXMap[nodeName].close;
+				continue;
+			}
+		}
+
+		//text nodes get appended directly
+		if(nodeName == '#text') {
+			str += node.textContent;
+			continue;
+		}
+
+		//otherwise we dig deeper, but we don't mess with the node tags
+		var outerHTML = node.outerHTML;
+		var openningTag = outerHTML.substring(0, outerHTML.indexOf(node.innerHTML));
+		var closingTag = outerHTML.substring(openningTag.length + node.innerHTML.length);
+		str += openningTag + DOMtoTeX(node) + closingTag;
+	} while(node = node.nextSibling);
+	return str;
+}
+
+function mapTeXmarkup(tex){
+	//put in a safeguard against infinite loop and to deal with capital escaping.
+	var i = 0;
+	while(tex.search(/[^\\]\{.*[^\\]\}/)!=-1  && i<10 ){
+		tex = tex.replace(/\\textit\{([^\{\}]*)\}/g, "<i>$1</i>").replace(/\\textbf\{([^\{\}]*)\}/g, "<b>$1</b>");	
+		tex = tex.replace(/\$[^\{\$\}]*_\{([^\{\}]*)\}\$/g, "<sub>$1</sub>").replace(/\$[^\{\}\$]*_\{\\textrm\{([^\{\}]+)\}\}\$/g, "<sub>$1</sub>");	
+		tex = tex.replace(/\$[^\{\}\$]*\^\{([^\{\}]*\})\$/g, "<sup>$1</sup>").replace(/\$[^\{\}\$]*\^\{\\textrm\{([^\{\}]*)\}\}\$/g, "<sup>$1</sup>");
+		tex = tex.replace(/\\textsc\{([^\{\}]+)/g, "<span style=\"small-caps\">$1</span>");
+		//we go for a minimum of 4 levels of nesting before getting rid of additional brackets
+		//we do need to remove the brackets here for the code above to work with preserved caps
+		if (i>3) tex = tex.replace(/\{([^\{\}]*[^\\])\}/g, "$1"); 
+		i++;
+	}
+	return tex;
+}
+
+/*
+var skipWords = ["but", "or", "yet", "so", "for", "and", "nor",
+	"a", "an", "the", "at", "by", "from", "in", "into", "of", "on",
+	"to", "with", "up", "down", "as", "while", "aboard", "about",
+	"above", "across", "after", "against", "along", "amid", "among",
+	"anti", "around", "as", "before", "behind", "below", "beneath",
+	"beside", "besides", "between", "beyond", "but", "despite",
+	"down", "during", "except", "for", "inside", "like", "near",
+	"off", "onto", "over", "past", "per", "plus", "round", "save",
+	"since", "than", "through", "toward", "towards", "under",
+	"underneath", "unlike", "until", "upon", "versus", "via",
+	"within", "without"];
+
+function isTitleCase(string) {
+	const wordRE = /([\s[(><])([^\s,\.:?!\])><\/&]+)/g;
+
+	var word;
+	while (word = wordRE.exec(string)) {
+		if(word[1] == '<' && word[2].search(/^[a-z]+$/i) != -1) { //skip HTML markup
+			var startIndex = wordRE.lastIndex - word[0].length;
+			var lastIndex = string.indexOf('>', startIndex);
+			if(lastIndex != -1) {
+				wordRE.lastIndex = lastIndex;	//we don't want to move to the character after >
+				continue;
+			}
+		}
+
+		word = word[2];
+		if(word.search(/\d/) != -1	//ignore words with numbers (including just numbers)
+			|| skipWords.indexOf(word.toLowerCase()) != -1) {
+			continue;
+		}
+
+		if(word.toLowerCase() == word) return false;
+	}
+	return true;
+}
+
+*/
+
+function mapEscape(character) {
+	return alwaysMap[character];
+}
+
+function mapAccent(character) {
+	return (mappingTable[character] ? mappingTable[character] : "?");
+}
+
+// a little substitution function for BibTeX keys, where we don't want LaTeX 
+// escaping, but we do want to preserve the base characters
+
+function tidyAccents(s) {
+	var r=s.toLowerCase();
+
+	// XXX Remove conditional when we drop Zotero 2.1.x support
+	// This is supported in Zotero 3.0 and higher
+	if (ZU.removeDiacritics !== undefined)
+		r = ZU.removeDiacritics(r, true);
+	else {
+	// We fall back on the replacement list we used previously
+		r = r.replace(new RegExp("[ä]", 'g'),"ae");
+		r = r.replace(new RegExp("[ö]", 'g'),"oe");
+		r = r.replace(new RegExp("[ü]", 'g'),"ue");
+		r = r.replace(new RegExp("[àáâãå]", 'g'),"a");
+		r = r.replace(new RegExp("æ", 'g'),"ae");
+		r = r.replace(new RegExp("ç", 'g'),"c");
+		r = r.replace(new RegExp("[èéêë]", 'g'),"e");
+		r = r.replace(new RegExp("[ìíîï]", 'g'),"i");
+		r = r.replace(new RegExp("ñ", 'g'),"n");                            
+		r = r.replace(new RegExp("[òóôõ]", 'g'),"o");
+		r = r.replace(new RegExp("œ", 'g'),"oe");
+		r = r.replace(new RegExp("[ùúû]", 'g'),"u");
+		r = r.replace(new RegExp("[ýÿ]", 'g'),"y");
+	}
+
+	return r;
+};
+
+var numberRe = /^[0-9]+/;
+// Below is a list of words that should not appear as part of the citation key
+// in includes the indefinite articles of English, German, French and Spanish, as well as a small set of English prepositions whose 
+// force is more grammatical than lexical, i.e. which are likely to strike many as 'insignificant'.
+// The assumption is that most who want a title word in their key would prefer the first word of significance.
+var citeKeyTitleBannedRe = /\b(a|an|the|some|from|on|in|to|of|do|with|der|die|das|ein|eine|einer|eines|einem|einen|un|une|la|le|l\'|el|las|los|al|uno|una|unos|unas|de|des|del|d\')(\s+|\b)/g;
+var citeKeyConversionsRe = /%([a-zA-Z])/;
+var citeKeyCleanRe = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
+
+var citeKeyConversions = {
+	"a":function (flags, item) {
+		if(item.creators && item.creators[0] && item.creators[0].lastName) {
+			return item.creators[0].lastName.toLowerCase().replace(/ /g,"_").replace(/,/g,"");
+		}
+		return "";
+	},
+	"t":function (flags, item) {
+		if (item["title"]) {
+			return item["title"].toLowerCase().replace(citeKeyTitleBannedRe, "").split(/\s+/g)[0];
+		}
+		return "";
+	},
+	"y":function (flags, item) {
+		if(item.date) {
+			var date = Zotero.Utilities.strToDate(item.date);
+			if(date.year && numberRe.test(date.year)) {
+				return date.year;
+			}
+		}
+		return "????";
+	}
+}
+
+
+function buildCiteKey (item,citekeys) {
+	var basekey = "";
+	var counter = 0;
+	citeKeyFormatRemaining = citeKeyFormat;
+	while (citeKeyConversionsRe.test(citeKeyFormatRemaining)) {
+		if (counter > 100) {
+			Zotero.debug("Pathological BibTeX format: " + citeKeyFormat);
+			break;
+		}
+		var m = citeKeyFormatRemaining.match(citeKeyConversionsRe);
+		if (m.index > 0) {
+			//add data before the conversion match to basekey
+			basekey = basekey + citeKeyFormatRemaining.substr(0, m.index);
+		}
+		var flags = ""; // for now
+		var f = citeKeyConversions[m[1]];
+		if (typeof(f) == "function") {
+			var value = f(flags, item);
+			Zotero.debug("Got value " + value + " for %" + m[1]);
+			//add conversion to basekey
+			basekey = basekey + value;
+		}
+		citeKeyFormatRemaining = citeKeyFormatRemaining.substr(m.index + m.length);
+		counter++;
+	}
+	if (citeKeyFormatRemaining.length > 0) {
+		basekey = basekey + citeKeyFormatRemaining;
+	}
+
+	// for now, remove any characters not explicitly known to be allowed;
+	// we might want to allow UTF-8 citation keys in the future, depending
+	// on implementation support.
+	//
+	// no matter what, we want to make sure we exclude
+	// " # % ' ( ) , = { } ~ and backslash
+	// however, we want to keep the base characters 
+
+	basekey = tidyAccents(basekey);
+	basekey = basekey.replace(citeKeyCleanRe, "");
+	var citekey = basekey;
+	var i = 0;
+	while(citekeys[citekey]) {
+		i++;
+		citekey = basekey + "-" + i;
+	}
+	citekeys[citekey] = true;
+	return citekey;
+}
+
+function doExport() {
+	//Zotero.write("% BibTeX export generated by Zotero "+Zotero.Utilities.getVersion());
+	// to make sure the BOM gets ignored
+	Zotero.write("\n");
+	
+	var first = true;
+	var citekeys = new Object();
+	var item;
+	while(item = Zotero.nextItem()) {
+		//don't export standalone notes and attachments
+		if(item.itemType == "note" || item.itemType == "attachment") continue;
+
+		// determine type
+		var type = zotero2bibtexTypeMap[item.itemType];
+		if (typeof(type) == "function") { type = type(item); }
+		if(!type) type = "misc";
+		
+		// create a unique citation key
+		var citekey = buildCiteKey(item, citekeys);
+		
+		// write citation key
+		Zotero.write((first ? "" : ",\n\n") + "@"+type+"{"+citekey);
+		first = false;
+		
+		for(var field in fieldMap) {
+			if(item[fieldMap[field]]) {
+				writeField(field, item[fieldMap[field]]);
+			}
+		}
+
+		if(item.reportNumber || item.issue || item.seriesNumber || item.patentNumber) {
+			writeField("number", item.reportNumber || item.issue || item.seriesNumber|| item.patentNumber);
+		}
+		
+		if (item.accessDate){
+			var accessYMD = item.accessDate.replace(/\s*\d+:\d+:\d+/, "");
+			writeField("urldate", accessYMD);
+		}
+		
+		if(item.publicationTitle) {
+			if(item.itemType == "bookSection" || item.itemType == "conferencePaper") {
+				writeField("booktitle", item.publicationTitle);
+			} else if(Zotero.getOption("useJournalAbbreviation")){
+				writeField("journal", item.journalAbbreviation);
+			} else {
+				writeField("journal", item.publicationTitle);
+			}
+		}
+		
+		if(item.publisher) {
+			if(item.itemType == "thesis") {
+				writeField("school", item.publisher);
+			} else if(item.itemType =="report") {
+				writeField("institution", item.publisher);
+			} else {
+				writeField("publisher", item.publisher);
+			}
+		}
+		
+		if(item.creators && item.creators.length) {
+			// split creators into subcategories
+			var author = "";
+			var editor = "";
+			var translator = "";
+			for(var i in item.creators) {
+				var creator = item.creators[i];
+				var creatorString = creator.lastName;
+
+				if (creator.firstName) {
+					creatorString = creator.lastName + ", " + creator.firstName;
+				} else if (creator.fieldMode == true) { // fieldMode true, assume corporate author
+					creatorString = "{" + creator.lastName + "}";
+				}
+
+				if (creator.creatorType == "editor" || creator.creatorType == "seriesEditor") {
+					editor += " and "+creatorString;
+				} else if (creator.creatorType == "translator") {
+					translator += " and "+creatorString;
+				} else {
+					author += " and "+creatorString;
+				}
+			}
+			
+			if(author) {
+				writeField("author", author.substr(5));
+			}
+			if(editor) {
+				writeField("editor", editor.substr(5));
+			}
+			if(translator) {
+				writeField("translator", translator.substr(5));
+			}
+		}
+		
+		if(item.date) {
+			var date = Zotero.Utilities.strToDate(item.date);
+			// need to use non-localized abbreviation
+			if(typeof date.month == "number") {
+				writeField("month", months[date.month], true);
+			}
+			if(date.year) {
+				writeField("year", date.year);
+			}
+		}
+		
+		if(item.extra) {
+			writeField("note", item.extra);
+		}
+		
+		if(item.tags && item.tags.length) {
+			var tagString = "";
+			for(var i in item.tags) {
+				var tag = item.tags[i];
+				tagString += ", "+tag.tag;
+			}
+			writeField("keywords", tagString.substr(2));
+		}
+		
+		if(item.pages) {
+			writeField("pages", item.pages.replace("-","--"));
+		}
+		
+		// Commented out, because we don't want a books number of pages in the BibTeX "pages" field for books.
+		//if(item.numPages) {
+		//	writeField("pages", item.numPages);
+		//}
+		
+		if(item.itemType == "webpage") {
+			writeField("howpublished", item.url);
+		}
+		if (item.notes && Zotero.getOption("exportNotes")) {
+			for(var i in item.notes) {
+				var note = item.notes[i];
+				writeField("annote", Zotero.Utilities.unescapeHTML(note["note"]));
+			}
+		}		
+		
+		if(item.attachments) {
+			var attachmentString = "";
+			
+			for(var i in item.attachments) {
+				var attachment = item.attachments[i];
+				if(Zotero.getOption("exportFileData") && attachment.saveFile) {
+					attachment.saveFile(attachment.defaultPath, true);
+					attachmentString += ";" + attachment.title + ":" + attachment.defaultPath + ":" + attachment.mimeType;
+				} else if(attachment.localPath) {
+					attachmentString += ";" + attachment.title + ":" + attachment.localPath + ":" + attachment.mimeType;
+				}
+			}
+			
+			if(attachmentString) {
+				writeField("file", attachmentString.substr(1));
+			}
+		}
+		
+		Zotero.write("\n}");
+	}
+}
+
+/** BEGIN: for configuring BibTeX from other translators **/
+var keywordSplitOnSpace = true;
+var keywordDelimRe = '\\s*[,;]\\s*';
+var keywordDelimReFlags = '';
+
+function setKeywordSplitOnSpace( val ) {
+	keywordSplitOnSpace = val;
+}
+
+function setKeywordDelimRe( val, flags ) {
+	//expect string, but it could be RegExp
+	if(typeof(val) != 'string') {
+		keywordDelimRe = val.toString().slice(1, val.toString().lastIndexOf('/'));
+		keywordDelimReFlags = val.toString().slice(val.toString().lastIndexOf('/')+1);
+	} else {
+		keywordDelimRe = val;
+		keywordDelimReFlags = flags;
+	}
+}
+/** END **/
+
+var exports = {
+	"doExport": doExport,
+	"doImport": doImport,
+	"setKeywordDelimRe": setKeywordDelimRe,
+	"setKeywordSplitOnSpace": setKeywordSplitOnSpace
 }
 
 //%a = first author surname
@@ -1646,800 +2736,6 @@ var alwaysMap = {
 	"{" : "\\{",
 	"}" : "\\}"
 };
-
-
-var strings = {};
-var keyRe = /[a-zA-Z0-9\-]/;
-var keywordSplitOnSpace = true;
-var keywordDelimRe = '\\s*[,;]\\s*';
-var keywordDelimReFlags = '';
-
-function setKeywordSplitOnSpace( val ) {
-	keywordSplitOnSpace = val;
-}
-
-function setKeywordDelimRe( val, flags ) {
-	//expect string, but it could be RegExp
-	if(typeof(val) != 'string') {
-		keywordDelimRe = val.toString().slice(1, val.toString().lastIndexOf('/'));
-		keywordDelimReFlags = val.toString().slice(val.toString().lastIndexOf('/')+1);
-	} else {
-		keywordDelimRe = val;
-		keywordDelimReFlags = flags;
-	}
-}
-
-function processField(item, field, value) {
-	if(Zotero.Utilities.trim(value) == '') return null;
-	if(fieldMap[field]) {
-		item[fieldMap[field]] = value;
-	} else if(inputFieldMap[field]) {
-		item[inputFieldMap[field]] = value;
-	} else if(field == "journal") {
-		if(item.publicationTitle) {
-			item.journalAbbreviation = value;
-		} else {
-			item.publicationTitle = value;
-		}
-	} else if(field == "fjournal") {
-		if(item.publicationTitle) {
-			// move publicationTitle to abbreviation
-			item.journalAbbreviation = value;
-		}
-		item.publicationTitle = value;
-	} else if(field == "author" || field == "editor" || field == "translator") {
-		// parse authors/editors/translators
-		var names = value.split(/ and /i); // now case insensitive
-		for(var i in names) {
-			var name = names[i];
-			// skip empty names
-			if (name.trim() == '') {
-				continue;
-			}
-			// Names in BibTeX can have three commas
-			pieces = name.split(',');
-			var creator = {};
-			if (pieces.length > 1) {
-				creator.firstName = pieces.pop().trim();
-				creator.lastName = pieces.join(',').trim();
-				creator.creatorType = field;
-			} else {
-				creator = Zotero.Utilities.cleanAuthor(name, field, false);
-			}
-			item.creators.push(creator);
-		}
-	} else if(field == "institution" || field == "organization") {
-		item.backupPublisher = value;
-	} else if(field == "number"){ // fix for techreport
-		if (item.itemType == "report") {
-			item.reportNumber = value;
-		} else if (item.itemType == "book" || item.itemType == "bookSection") {
-			item.seriesNumber = value;
-		} else if (item.itemType == "patent"){
-			item.patentNumber = value;
-		} else {
-			item.issue = value;
-		}
-	} else if(field == "month") {
-		var monthIndex = months.indexOf(value.toLowerCase());
-		if(monthIndex != -1) {
-			value = Zotero.Utilities.formatDate({month:monthIndex});
-		} else {
-			value += " ";
-		}
-		
-		if(item.date) {
-			if(value.indexOf(item.date) != -1) {
-				// value contains year and more
-				item.date = value;
-			} else {
-				item.date = value+item.date;
-			}
-		} else {
-			item.date = value;
-		}
-	} else if(field == "year") {
-		if(item.date) {
-			if(item.date.indexOf(value) == -1) {
-				// date does not already contain year
-				item.date += value;
-			}
-		} else {
-			item.date = value;
-		}
-	} else if(field == "pages") {
-		if (item.itemType == "book" || item.itemType == "thesis" || item.itemType == "manuscript") {
-			item.numPages = value;
-		}
-		else {
-			item.pages = value.replace(/--/g, "-");
-		}
-	} else if(field == "note") {
-		item.extra += "\n"+value;
-	} else if(field == "howpublished") {
-		if(value.length >= 7) {
-			var str = value.substr(0, 7);
-			if(str == "http://" || str == "https:/" || str == "mailto:") {
-				item.url = value;
-			} else {
-				item.extra += "\nPublished: "+value;
-			}
-		}
-	
-	} 
-	//accept lastchecked or urldate for access date. These should never both occur. 
-	//If they do we don't know which is better so we might as well just take the second one
-	else if (field == "lastchecked"|| field == "urldate"){
-		item.accessDate = value;
-	}
-	else if(field == "keywords" || field == "keyword") {
-		var re = new RegExp(keywordDelimRe, keywordDelimReFlags);
-		if(!value.match(re) && keywordSplitOnSpace) {
-			// keywords/tags
-			item.tags = value.split(/\s+/);
-		} else {
-			item.tags = value.split(re);
-		}
-	} else if (field == "comment" || field == "annote" || field == "review") {
-		item.notes.push({note:Zotero.Utilities.text2html(value)});
-	} else if (field == "pdf") {
-		item.attachments = [{path:value, mimeType:"application/pdf"}];
-	} else if (field == "sentelink") { // the reference manager 'Sente' has a unique file scheme in exported BibTeX
-		item.attachments = [{path:value.split(",")[0], mimeType:"application/pdf"}];
-	} else if (field == "file") {
-		var attachments = value.split(";");
-		for(var i in attachments){
-			var attachment = attachments[i];
-			var parts = attachment.split(":");
-			var filetitle = parts[0];
-			var filepath = parts[1];
-			if (filepath.trim() === '') continue; // skip empty entries
-			var filetype = parts[2];
-			if (filetitle.length == 0) {
-				filetitle = "Attachment";
-			}
-			if (filetype.match(/pdf/i)) {
-				item.attachments.push({path:filepath, mimeType:"application/pdf", title:filetitle});
-			} else {
-				item.attachments.push({path:filepath, title:filetitle});
-			}
-		}
-	}
-}
-
-function getFieldValue(read) {
-	var value = "";
-	// now, we have the first character of the field
-	if(read == "{") {
-		// character is a brace
-		var openBraces = 1;
-		while(read = Zotero.read(1)) {
-			if(read == "{" && value[value.length-1] != "\\") {
-				openBraces++;
-				value += "{";
-			} else if(read == "}" && value[value.length-1] != "\\") {
-				openBraces--;
-				if(openBraces == 0) {
-					break;
-				} else {
-					value += "}";
-				}
-			} else {
-				value += read;
-			}
-		}
-		
-	} else if(read == '"') {
-		var openBraces = 0;
-		while(read = Zotero.read(1)) {
-			if(read == "{" && value[value.length-1] != "\\") {
-				openBraces++;
-				value += "{";
-			} else if(read == "}" && value[value.length-1] != "\\") {
-				openBraces--;
-				value += "}";
-			} else if(read == '"' && openBraces == 0) {
-				break;
-			} else {
-				value += read;
-			}
-		}
-	}
-	
-	if(value.length > 1) {
-		// replace accented characters (yucky slow)
-		value = value.replace(/{?(\\[`"'^~=a-z]){?\\?([A-Za-z])}/g, "{$1$2}");
-		//convert tex markup into permitted HTML
-		value = mapTeXmarkup(value);
-		for (var mapped in reversemappingTable) { // really really slow!
-			var unicode = reversemappingTable[mapped];
-			while(value.indexOf(mapped) !== -1) {
-				Zotero.debug("Replace " + mapped + " in " + value + " with " + unicode);
-				value = value.replace(mapped, unicode);
-			}
-			mapped = mapped.replace(/[{}]/g, "");
-			while(value.indexOf(mapped) !== -1) {
-				//Z.debug(value)
-				Zotero.debug("Replace(2) " + mapped + " in " + value + " with " + unicode);
-				value = value.replace(mapped, unicode);
-			}
-		}
-		
-		// kill braces
-		value = value.replace(/([^\\])[{}]+/g, "$1");
-		if(value[0] == "{") {
-			value = value.substr(1);
-		}
-		
-		// chop off backslashes
-		value = value.replace(/([^\\])\\([#$%&~_^\\{}])/g, "$1$2");
-		value = value.replace(/([^\\])\\([#$%&~_^\\{}])/g, "$1$2");
-		if(value[0] == "\\" && "#$%&~_^\\{}".indexOf(value[1]) != -1) {
-			value = value.substr(1);
-		}
-		if(value[value.length-1] == "\\" && "#$%&~_^\\{}".indexOf(value[value.length-2]) != -1) {
-			value = value.substr(0, value.length-1);
-		}
-		value = value.replace(/\\\\/g, "\\");
-		value = value.replace(/\s+/g, " ");
-	}
-
-	return value;
-}
-
-function beginRecord(type, closeChar) {
-	type = Zotero.Utilities.trimInternal(type.toLowerCase());
-	if(type != "string") {
-		var zoteroType = bibtex2zoteroTypeMap[type];
-		if (!zoteroType) {
-			Zotero.debug("discarded item from BibTeX; type was "+type);
-			return;
-		}
-		var item = new Zotero.Item(zoteroType);
-		
-		item.extra = "";
-	}
-	
-	var field = "";
-	
-	// by setting dontRead to true, we can skip a read on the next iteration
-	// of this loop. this is useful after we read past the end of a string.
-	var dontRead = false;
-	
-	while(dontRead || (read = Zotero.read(1))) {
-		dontRead = false;
-		
-		if(read == "=") {								// equals begin a field
-		// read whitespace
-			var read = Zotero.read(1);
-			while(" \n\r\t".indexOf(read) != -1) {
-				read = Zotero.read(1);
-			}
-			
-			if(keyRe.test(read)) {
-				// read numeric data here, since we might get an end bracket
-				// that we should care about
-				value = "";
-				value += read;
-				
-				// character is a number
-				while((read = Zotero.read(1)) && keyRe.test(read)) {
-					value += read;
-				}
-				
-				// don't read the next char; instead, process the character
-				// we already read past the end of the string
-				dontRead = true;
-				
-				// see if there's a defined string
-				if(strings[value]) value = strings[value];
-			} else {
-				var value = getFieldValue(read);
-			}
-			
-			if(item) {
-				processField(item, field.toLowerCase(), value);
-			} else if(type == "string") {
-				strings[field] = value;
-			}
-			field = "";
-		} else if(read == ",") {						// commas reset
-			field = "";
-		} else if(read == closeChar) {
-			if(item) {
-				if(item.extra) item.extra = item.extra.substr(1); // chop \n
-				item.complete();
-			}
-			return;
-		} else if(" \n\r\t".indexOf(read) == -1) {		// skip whitespace
-			field += read;
-		}
-	}
-}
-
-function doImport() {
-	var read = "", text = "", recordCloseElement = false;
-	var type = false;
-	
-	while(read = Zotero.read(1)) {
-		if(read == "@") {
-			type = "";
-		} else if(type !== false) {
-			if(type == "comment") {
-				type = false;
-			} else if(read == "{") {		// possible open character
-				beginRecord(type, "}");
-				type = false;
-			} else if(read == "(") {		// possible open character
-				beginRecord(type, ")");
-				type = false;
-			} else if(/[a-zA-Z0-9-_]/.test(read)) {
-				type += read;
-			}
-		}
-	}
-}
-
-// some fields are, in fact, macros.  If that is the case then we should not put the
-// data in the braces as it will cause the macros to not expand properly
-function writeField(field, value, isMacro) {
-	if (!value && typeof value != "number") return;
-	value = value + ""; // convert integers to strings
-	Zotero.write(",\n\t" + field + " = ");
-	if (!isMacro) Zotero.write("{");
-	// url field is preserved, for use with \href and \url
-	// Other fields (DOI?) may need similar treatment
-	if (!isMacro && !(field == "url" || field == "doi" || field == "file" || field == "lccn")) {
-		//var titleCase = isTitleCase(value);	//figure this out before escaping all the characters
-		// I hope these are all the escape characters! (except for < > which are handled later)
-		value = value.replace(/[|\~\^\\\{\}]/g, mapEscape).replace(/[\#\$\%\&\_]/g, "\\$&");
-		//convert the HTML markup allowed in Zotero for rich text to TeX
-		value = mapHTMLmarkup(value);
-		//escape < > if mapHTMLmarkup did not convert some
-		value = value.replace(/[<>]/g, mapEscape);
-		
-		/*
-		if (field == "title" || field == "type" || field == "shorttitle" || field == "booktitle" || field == "series") {
-			if (!titleCase) {
-				//protect caps for everything but the first letter
-					value = value.replace(/(.)([A-Z]+)/g, "$1{$2}");
-			} else {	//protect all-caps vords and initials
-				value = value.replace(/([\s.->])([A-Z]+)(?=\.)/g, "$1{$2}");	//protect initials
-				if(value.toUpperCase() != value) value = value.replace(/([\s>])([A-Z]{2,})(?=[\.,\s<]|$)/g, "$1{$2}");
-			}
-		}
-		*/	
-			
-		// Case of words with uppercase characters in non-initial positions is preserved with braces.
-		// treat hyphen as whitespace for this purpose so that Large-scale etc. don't get enclosed
-		// treat curly bracket as whitespace because of mark-up immediately preceding word
-		// treat opening parentheses &brackets as whitespace	
-		 if (field != "pages") {
-			value = value .replace(/[^\s-\}\{\(\[]+[A-Z][^\s,]*/g, "{$&}");
-		}
-	}
-
-	if (Zotero.getOption("exportCharset") != "UTF-8") {
-		value = value.replace(/[\u0080-\uFFFF]/g, mapAccent);
-	}
-
-	Zotero.write(value);
-	if (!isMacro) Zotero.write("}");
-}
-
-function mapHTMLmarkup(characters) {
-	//convert string to DOM
-	var dom = (new DOMParser()).parseFromString(characters, 'text/html');
-	return DOMtoTeX(dom.body);
-}
-
-
-var HTMLtoTeXMap = {
-	i: {
-		open: "\\textit{",
-		close: "}"
-	},
-	b: {
-		open: "\\textbf{",
-		close: "}"
-	},
-	sup: {
-		open: "\$^{\\textrm{",
-		close: "}}\$"
-	},
-	sub: {
-		open: "\$_{\\textrm{",
-		close: "}}\$"
-	},
-	span: {
-		open: "\\textsc{",
-		close: "}"
-	},
-	sc: {
-		open: "\\textsc{",
-		close: "}"
-	}
-}
-
-function DOMtoTeX(element) {
-	
-	
-	
-	var str = "";
-	var node = element.firstChild;
-	if(!node) return str;
-
-	do {
-		var nodeName = node.nodeName.toLowerCase();
-		//nodes we can handle
-		if(HTMLtoTeXMap[nodeName]) {
-			//span element must have style="small-caps"
-			if(nodeName != 'span'
-				|| (node.style && node.style.fontVariant == 'small-caps')) {
-				str += HTMLtoTeXMap[nodeName].open
-							+ DOMtoTeX(node)
-							+ HTMLtoTeXMap[nodeName].close;
-				continue;
-			}
-		}
-
-		//text nodes get appended directly
-		if(nodeName == '#text') {
-			str += node.textContent;
-			continue;
-		}
-
-		//otherwise we dig deeper, but we don't mess with the node tags
-		var outerHTML = node.outerHTML;
-		var openningTag = outerHTML.substring(0, outerHTML.indexOf(node.innerHTML));
-		var closingTag = outerHTML.substring(openningTag.length + node.innerHTML.length);
-		str += openningTag + DOMtoTeX(node) + closingTag;
-	} while(node = node.nextSibling);
-	return str;
-}
-
-function mapTeXmarkup(tex){
-	//put in a safeguard against infinite loop and to deal with capital escaping.
-	var i = 0;
-	while(tex.search(/[^\\]\{.*[^\\]\}/)!=-1  && i<10 ){
-		tex = tex.replace(/\\textit\{([^\{\}]*)\}/g, "<i>$1</i>").replace(/\\textbf\{([^\{\}]*)\}/g, "<b>$1</b>");	
-		tex = tex.replace(/\$[^\{\$\}]*_\{([^\{\}]*)\}\$/g, "<sub>$1</sub>").replace(/\$[^\{\}\$]*_\{\\textrm\{([^\{\}]+)\}\}\$/g, "<sub>$1</sub>");	
-		tex = tex.replace(/\$[^\{\}\$]*\^\{([^\{\}]*\})\$/g, "<sup>$1</sup>").replace(/\$[^\{\}\$]*\^\{\\textrm\{([^\{\}]*)\}\}\$/g, "<sup>$1</sup>");
-		tex = tex.replace(/\\textsc\{([^\{\}]+)/g, "<span style=\"small-caps\">$1</span>");
-		//we go for a minimum of 4 levels of nesting before getting rid of additional brackets
-		//we do need to remove the brackets here for the code above to work with preserved caps
-		if (i>3) tex = tex.replace(/\{([^\{\}]*[^\\])\}/g, "$1"); 
-		i++;
-	}
-	return tex;
-}
-
-/*
-var skipWords = ["but", "or", "yet", "so", "for", "and", "nor",
-	"a", "an", "the", "at", "by", "from", "in", "into", "of", "on",
-	"to", "with", "up", "down", "as", "while", "aboard", "about",
-	"above", "across", "after", "against", "along", "amid", "among",
-	"anti", "around", "as", "before", "behind", "below", "beneath",
-	"beside", "besides", "between", "beyond", "but", "despite",
-	"down", "during", "except", "for", "inside", "like", "near",
-	"off", "onto", "over", "past", "per", "plus", "round", "save",
-	"since", "than", "through", "toward", "towards", "under",
-	"underneath", "unlike", "until", "upon", "versus", "via",
-	"within", "without"];
-
-function isTitleCase(string) {
-	const wordRE = /([\s[(><])([^\s,\.:?!\])><\/&]+)/g;
-
-	var word;
-	while (word = wordRE.exec(string)) {
-		if(word[1] == '<' && word[2].search(/^[a-z]+$/i) != -1) { //skip HTML markup
-			var startIndex = wordRE.lastIndex - word[0].length;
-			var lastIndex = string.indexOf('>', startIndex);
-			if(lastIndex != -1) {
-				wordRE.lastIndex = lastIndex;	//we don't want to move to the character after >
-				continue;
-			}
-		}
-
-		word = word[2];
-		if(word.search(/\d/) != -1	//ignore words with numbers (including just numbers)
-			|| skipWords.indexOf(word.toLowerCase()) != -1) {
-			continue;
-		}
-
-		if(word.toLowerCase() == word) return false;
-	}
-	return true;
-}
-
-*/
-
-function mapEscape(character) {
-	return alwaysMap[character];
-}
-
-function mapAccent(character) {
-	return (mappingTable[character] ? mappingTable[character] : "?");
-}
-
-// a little substitution function for BibTeX keys, where we don't want LaTeX 
-// escaping, but we do want to preserve the base characters
-
-function tidyAccents(s) {
-	var r=s.toLowerCase();
-
-	// XXX Remove conditional when we drop Zotero 2.1.x support
-	// This is supported in Zotero 3.0 and higher
-	if (ZU.removeDiacritics !== undefined)
-		r = ZU.removeDiacritics(r, true);
-	else {
-	// We fall back on the replacement list we used previously
-		r = r.replace(new RegExp("[ä]", 'g'),"ae");
-		r = r.replace(new RegExp("[ö]", 'g'),"oe");
-		r = r.replace(new RegExp("[ü]", 'g'),"ue");
-		r = r.replace(new RegExp("[àáâãå]", 'g'),"a");
-		r = r.replace(new RegExp("æ", 'g'),"ae");
-		r = r.replace(new RegExp("ç", 'g'),"c");
-		r = r.replace(new RegExp("[èéêë]", 'g'),"e");
-		r = r.replace(new RegExp("[ìíîï]", 'g'),"i");
-		r = r.replace(new RegExp("ñ", 'g'),"n");                            
-		r = r.replace(new RegExp("[òóôõ]", 'g'),"o");
-		r = r.replace(new RegExp("œ", 'g'),"oe");
-		r = r.replace(new RegExp("[ùúû]", 'g'),"u");
-		r = r.replace(new RegExp("[ýÿ]", 'g'),"y");
-	}
-
-	return r;
-};
-
-var numberRe = /^[0-9]+/;
-// Below is a list of words that should not appear as part of the citation key
-// in includes the indefinite articles of English, German, French and Spanish, as well as a small set of English prepositions whose 
-// force is more grammatical than lexical, i.e. which are likely to strike many as 'insignificant'.
-// The assumption is that most who want a title word in their key would prefer the first word of significance.
-var citeKeyTitleBannedRe = /\b(a|an|the|some|from|on|in|to|of|do|with|der|die|das|ein|eine|einer|eines|einem|einen|un|une|la|le|l\'|el|las|los|al|uno|una|unos|unas|de|des|del|d\')(\s+|\b)/g;
-var citeKeyConversionsRe = /%([a-zA-Z])/;
-var citeKeyCleanRe = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
-
-var citeKeyConversions = {
-	"a":function (flags, item) {
-		if(item.creators && item.creators[0] && item.creators[0].lastName) {
-			return item.creators[0].lastName.toLowerCase().replace(/ /g,"_").replace(/,/g,"");
-		}
-		return "";
-	},
-	"t":function (flags, item) {
-		if (item["title"]) {
-			return item["title"].toLowerCase().replace(citeKeyTitleBannedRe, "").split(/\s+/g)[0];
-		}
-		return "";
-	},
-	"y":function (flags, item) {
-		if(item.date) {
-			var date = Zotero.Utilities.strToDate(item.date);
-			if(date.year && numberRe.test(date.year)) {
-				return date.year;
-			}
-		}
-		return "????";
-	}
-}
-
-
-function buildCiteKey (item,citekeys) {
-	var basekey = "";
-	var counter = 0;
-	citeKeyFormatRemaining = citeKeyFormat;
-	while (citeKeyConversionsRe.test(citeKeyFormatRemaining)) {
-		if (counter > 100) {
-			Zotero.debug("Pathological BibTeX format: " + citeKeyFormat);
-			break;
-		}
-		var m = citeKeyFormatRemaining.match(citeKeyConversionsRe);
-		if (m.index > 0) {
-			//add data before the conversion match to basekey
-			basekey = basekey + citeKeyFormatRemaining.substr(0, m.index);
-		}
-		var flags = ""; // for now
-		var f = citeKeyConversions[m[1]];
-		if (typeof(f) == "function") {
-			var value = f(flags, item);
-			Zotero.debug("Got value " + value + " for %" + m[1]);
-			//add conversion to basekey
-			basekey = basekey + value;
-		}
-		citeKeyFormatRemaining = citeKeyFormatRemaining.substr(m.index + m.length);
-		counter++;
-	}
-	if (citeKeyFormatRemaining.length > 0) {
-		basekey = basekey + citeKeyFormatRemaining;
-	}
-
-	// for now, remove any characters not explicitly known to be allowed;
-	// we might want to allow UTF-8 citation keys in the future, depending
-	// on implementation support.
-	//
-	// no matter what, we want to make sure we exclude
-	// " # % ' ( ) , = { } ~ and backslash
-	// however, we want to keep the base characters 
-
-	basekey = tidyAccents(basekey);
-	basekey = basekey.replace(citeKeyCleanRe, "");
-	var citekey = basekey;
-	var i = 0;
-	while(citekeys[citekey]) {
-		i++;
-		citekey = basekey + "-" + i;
-	}
-	citekeys[citekey] = true;
-	return citekey;
-}
-
-function doExport() {
-	//Zotero.write("% BibTeX export generated by Zotero "+Zotero.Utilities.getVersion());
-	// to make sure the BOM gets ignored
-	Zotero.write("\n");
-	
-	var first = true;
-	var citekeys = new Object();
-	var item;
-	while(item = Zotero.nextItem()) {
-		//don't export standalone notes and attachments
-		if(item.itemType == "note" || item.itemType == "attachment") continue;
-
-		// determine type
-		var type = zotero2bibtexTypeMap[item.itemType];
-		if (typeof(type) == "function") { type = type(item); }
-		if(!type) type = "misc";
-		
-		// create a unique citation key
-		var citekey = buildCiteKey(item, citekeys);
-		
-		// write citation key
-		Zotero.write((first ? "" : ",\n\n") + "@"+type+"{"+citekey);
-		first = false;
-		
-		for(var field in fieldMap) {
-			if(item[fieldMap[field]]) {
-				writeField(field, item[fieldMap[field]]);
-			}
-		}
-
-		if(item.reportNumber || item.issue || item.seriesNumber || item.patentNumber) {
-			writeField("number", item.reportNumber || item.issue || item.seriesNumber|| item.patentNumber);
-		}
-		
-		if (item.accessDate){
-			var accessYMD = item.accessDate.replace(/\s*\d+:\d+:\d+/, "");
-			writeField("urldate", accessYMD);
-		}
-		
-		if(item.publicationTitle) {
-			if(item.itemType == "bookSection" || item.itemType == "conferencePaper") {
-				writeField("booktitle", item.publicationTitle);
-			} else if(Zotero.getOption("useJournalAbbreviation")){
-				writeField("journal", item.journalAbbreviation);
-			} else {
-				writeField("journal", item.publicationTitle);
-			}
-		}
-		
-		if(item.publisher) {
-			if(item.itemType == "thesis") {
-				writeField("school", item.publisher);
-			} else if(item.itemType =="report") {
-				writeField("institution", item.publisher);
-			} else {
-				writeField("publisher", item.publisher);
-			}
-		}
-		
-		if(item.creators && item.creators.length) {
-			// split creators into subcategories
-			var author = "";
-			var editor = "";
-			var translator = "";
-			for(var i in item.creators) {
-				var creator = item.creators[i];
-				var creatorString = creator.lastName;
-
-				if (creator.firstName) {
-					creatorString = creator.lastName + ", " + creator.firstName;
-				} else if (creator.fieldMode == true) { // fieldMode true, assume corporate author
-					creatorString = "{" + creator.lastName + "}";
-				}
-
-				if (creator.creatorType == "editor" || creator.creatorType == "seriesEditor") {
-					editor += " and "+creatorString;
-				} else if (creator.creatorType == "translator") {
-					translator += " and "+creatorString;
-				} else {
-					author += " and "+creatorString;
-				}
-			}
-			
-			if(author) {
-				writeField("author", author.substr(5));
-			}
-			if(editor) {
-				writeField("editor", editor.substr(5));
-			}
-			if(translator) {
-				writeField("translator", translator.substr(5));
-			}
-		}
-		
-		if(item.date) {
-			var date = Zotero.Utilities.strToDate(item.date);
-			// need to use non-localized abbreviation
-			if(typeof date.month == "number") {
-				writeField("month", months[date.month], true);
-			}
-			if(date.year) {
-				writeField("year", date.year);
-			}
-		}
-		
-		if(item.extra) {
-			writeField("note", item.extra);
-		}
-		
-		if(item.tags && item.tags.length) {
-			var tagString = "";
-			for(var i in item.tags) {
-				var tag = item.tags[i];
-				tagString += ", "+tag.tag;
-			}
-			writeField("keywords", tagString.substr(2));
-		}
-		
-		if(item.pages) {
-			writeField("pages", item.pages.replace("-","--"));
-		}
-		
-		// Commented out, because we don't want a books number of pages in the BibTeX "pages" field for books.
-		//if(item.numPages) {
-		//	writeField("pages", item.numPages);
-		//}
-		
-		if(item.itemType == "webpage") {
-			writeField("howpublished", item.url);
-		}
-		if (item.notes && Zotero.getOption("exportNotes")) {
-			for(var i in item.notes) {
-				var note = item.notes[i];
-				writeField("annote", Zotero.Utilities.unescapeHTML(note["note"]));
-			}
-		}		
-		
-		if(item.attachments) {
-			var attachmentString = "";
-			
-			for(var i in item.attachments) {
-				var attachment = item.attachments[i];
-				if(Zotero.getOption("exportFileData") && attachment.saveFile) {
-					attachment.saveFile(attachment.defaultPath, true);
-					attachmentString += ";" + attachment.title + ":" + attachment.defaultPath + ":" + attachment.mimeType;
-				} else if(attachment.localPath) {
-					attachmentString += ";" + attachment.title + ":" + attachment.localPath + ":" + attachment.mimeType;
-				}
-			}
-			
-			if(attachmentString) {
-				writeField("file", attachmentString.substr(1));
-			}
-		}
-		
-		Zotero.write("\n}");
-	}
-}
-
-var exports = {
-	"doExport": doExport,
-	"doImport": doImport,
-	"setKeywordDelimRe": setKeywordDelimRe,
-	"setKeywordSplitOnSpace": setKeywordSplitOnSpace
-}
 
 /** BEGIN TEST CASES **/
 var testCases = [
