@@ -18,6 +18,12 @@
 	"lastUpdated": "2013-01-23 22:29:20"
 }
 
+/** DOCUMENTATION
+ * http://mirror.jmu.edu/pub/CTAN/info/bibtex/tamethebeast/ttb_en.pdf
+ * http://artis.imag.fr/~Xavier.Decoret/resources/xdkbibtex/bibtex_summary.html
+ * BibLaTeX: http://mirror.math.ku.edu/tex-archive/macros/latex/contrib/biblatex/doc/biblatex.pdf
+ */
+
 function detectImport() {
 	var maxChars = 1048576; // 1MB
 	
@@ -644,24 +650,21 @@ function doExport() {
 		//don't export standalone notes and attachments
 		if(item.itemType == "note" || item.itemType == "attachment") continue;
 
-		// determine type
-		var type = zotero2bibtexTypeMap[item.itemType];
-		if (typeof(type) == "function") { type = type(item); }
-		if(!type) type = "misc";
+		var exporter = new exportMapper.Map(item);
 		
 		// create a unique citation key
 		var citekey = buildCiteKey(item, citekeys);
 		
 		// write citation key
-		Zotero.write((first ? "" : ",\n\n") + "@"+type+"{"+citekey);
+		Zotero.write((first ? "" : ",\n\n") + "@"+exporter.itemType+"{"+citekey);
 		first = false;
 		
-		for(var field in fieldMap) {
-			if(item[fieldMap[field]]) {
-				writeField(field, item[fieldMap[field]]);
-			}
+		
+		for(var field in exporter.fieldMap) {
+			writeField(field, exporter.fieldValue(field));
 		}
 
+/*
 		var number = item.reportNumber || item.issue || item.seriesNumber || item.patentNumber;
 		if(number) {
 			writeField("number", number);
@@ -769,7 +772,7 @@ function doExport() {
 				var note = item.notes[i];
 				writeField("annote", Zotero.Utilities.unescapeHTML(note["note"]));
 			}
-		}		
+		}
 		
 		if(item.attachments) {
 			var attachmentString = "";
@@ -788,7 +791,7 @@ function doExport() {
 				writeField("file", attachmentString.substr(1));
 			}
 		}
-		
+		*/
 		Zotero.write("\n}");
 	}
 }
@@ -800,71 +803,105 @@ var exports = {
 	"setKeywordSplitOnSpace": setKeywordSplitOnSpace
 }
 
-/** MAPPINGS **/
-var fieldMap = {
-	address:"place",
-	chapter:"section",
-	edition:"edition",
-	type:"type",
-	series:"series",
-	title:"title",
-	volume:"volume",
-	copyright:"rights",
-	isbn:"ISBN",
-	issn:"ISSN",
-	lccn:"callNumber",
-	location:"archiveLocation",
-	shorttitle:"shortTitle",
-	url:"url",
-	doi:"DOI",
-	abstract:"abstractNote",
-  	nationality: "country",
-  	language:"language",
-  	assignee:"assignee"
-};
+/****************
+ *** MAPPINGS ***
+ ****************/
 
-var inputFieldMap = {
-	booktitle :"publicationTitle",
-	school:"publisher",
-	institution:"publisher",
-	publisher:"publisher",
-	issue:"issue"
-};
-
-var zotero2bibtexTypeMap = {
-	"book":"book",
-	"bookSection":"incollection",
-	"journalArticle":"article",
-	"magazineArticle":"article",
-	"newspaperArticle":"article",
-	"thesis":"phdthesis",
-	"letter":"misc",
-	"manuscript":"unpublished",
-	"patent" :"patent",
-	"interview":"misc",
-	"film":"misc",
-	"artwork":"misc",
-	"webpage":"misc",
-	"conferencePaper":"inproceedings",
-	"report":"techreport"
-};
-
-var bibtex2zoteroTypeMap = {
+/** type maps **/
+//reversible mappings
+var typeMap = {
 	"book":"book", // or booklet, proceedings
 	"inbook":"bookSection",
-	"incollection":"bookSection",
 	"article":"journalArticle", // or magazineArticle or newspaperArticle
 	"patent" :"patent",
 	"phdthesis":"thesis",
 	"unpublished":"manuscript",
 	"inproceedings":"conferencePaper", // check for conference also
+	"techreport":"report"
+};
+
+//irreversible import mappings
+var importTypeMap = {
+	"incollection":"bookSection",
 	"conference":"conferencePaper",
-	"techreport":"report",
 	"booklet":"book",
 	"manual":"book",
 	"mastersthesis":"thesis",
 	"misc":"book",
 	"proceedings":"book"
+}
+
+//irreversible export mappings
+var exportTypeMap = {
+	"magazineArticle":"article",
+	"newspaperArticle":"article",
+	"letter":"misc",
+	"interview":"misc",
+	"film":"misc",
+	"artwork":"misc",
+	"webpage":"misc"
+};
+
+//supplement type maps with reversible map
+for(var t in typeMap) {
+	importTypeMap[t] = typeMap[t];
+	exportTypeMap[typeMap[t]] = t;
+}
+
+/** field maps **/
+//reversible mappings
+var fieldMap = {
+/*	abstract: {
+		_default: "abstractNote",
+		_attr: { escapeHTML: true }
+	},*/
+	address: "place",
+	annote: "notes",	//don't export?
+	author: {
+		_default: "creators/author",
+		_value: {
+			"in": parseCreators,
+			"out": concatCreators
+		}
+	},
+//	assignee: "assignee",
+	booktitle: "publicationTitle",
+	chapter: "section",
+//	copyright:"rights",
+//	doi:"DOI",
+	edition:"edition",
+	editor: {
+		_default: "creators/editor",
+		_value: {
+			"in": parseCreators,
+			"out": concatCreators
+		}
+	},
+	howpublished: false, //ignore for now
+	institution: "publisher",
+//	isbn:"ISBN",
+//	issn:"ISSN",
+//	issue:"issue"
+	journal: "publicationTitle",
+	key:
+//	language:"language",
+//	lccn:"callNumber",
+//	location:"archiveLocation",
+	month:
+//	nationality: "country",
+	note:
+	number:
+	organization:
+	pages:
+	publisher: "publisher",
+	school:
+	series:"series",
+//	shorttitle:"shortTitle",
+	title:"title",
+	type:"type",
+//	url:"url",
+	volume:"volume",
+	year:
 };
 
 /*
@@ -875,6 +912,9 @@ var bibtex2zoteroTypeMap = {
 var months = ["jan", "feb", "mar", "apr", "may", "jun",
 			  "jul", "aug", "sep", "oct", "nov", "dec"];
 
+/**********************
+ *** CHARACTER MAPS ***
+ **********************/
 /*
  * new mapping table based on that from Matthias Steffens,
  * then enhanced with some fields generated from the unicode table.
