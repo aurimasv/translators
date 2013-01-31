@@ -20,6 +20,7 @@
 
 /** DOCUMENTATION
  * http://mirror.jmu.edu/pub/CTAN/info/bibtex/tamethebeast/ttb_en.pdf
+ * ftp://ftp.tex.ac.uk/tex-archive/biblio/bibtex/contrib/doc/btxFAQ.pdf
  * http://artis.imag.fr/~Xavier.Decoret/resources/xdkbibtex/bibtex_summary.html
  * BibLaTeX: http://mirror.math.ku.edu/tex-archive/macros/latex/contrib/biblatex/doc/biblatex.pdf
  */
