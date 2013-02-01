@@ -312,15 +312,24 @@ bibtexIterator.prototype.readMacro = function() {
 };
 
 bibtexIterator.prototype.readString(openChar, terminatingChars) {
-	var moreText, text = '', value = '';
-	var i=0, c;
-	while(moreText = this.BufferedReader.read(100)) {
-		text += moreText;
-		for(var n=text.length; i<n; i++) {	//omission of i declaration is intentional. Declared above
-			
+	var braceLevel = 0;
+	var stopOn = terminatingChars.slice().push(openChar);
+	
+	var mathMode = false;
+	
+	var string = this.BufferedReader.readUntil('${\\', function(c, str){
+		switch(c) {
+			case '$':
+			case '{':
+			case '\\':
 		}
-	}
-	return false;
+	}, stopOn);
+	
+	//consume terminating char
+	var c = this.BufferedReader.read(1);
+	if(c && c != openChar) this.BufferedReader.push(c);
+	
+	return string;
 };
 
 //read the next item field from file and return it

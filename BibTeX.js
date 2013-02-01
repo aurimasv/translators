@@ -19,10 +19,10 @@
 }
 
 /** DOCUMENTATION
- * http://mirror.jmu.edu/pub/CTAN/info/bibtex/tamethebeast/ttb_en.pdf
- * ftp://ftp.tex.ac.uk/tex-archive/biblio/bibtex/contrib/doc/btxFAQ.pdf
+ * http://www.ctan.org/tex-archive/biblio/bibtex/contrib/doc/
+ * http://www.ctan.org/tex-archive/info/bibtex/tamethebeast
  * http://artis.imag.fr/~Xavier.Decoret/resources/xdkbibtex/bibtex_summary.html
- * BibLaTeX: http://mirror.math.ku.edu/tex-archive/macros/latex/contrib/biblatex/doc/biblatex.pdf
+ * BibLaTeX: http://www.ctan.org/tex-archive/macros/latex/contrib/biblatex/doc
  */
 
 function detectImport() {
