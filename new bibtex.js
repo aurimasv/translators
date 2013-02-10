@@ -1,11 +1,14 @@
 var bibtexIterator = function() { 
 	this.BufferedReader = new BufferedReader(Zotero.read);
 	this.strings = {};
-	this.items = {};	//keeps track of items for cross-refs
+	this.items = {};	//keeps track of processed items for cross-refs
 	this.needCrossRef = {}; //items that are awaiting cross-referenced items
 	this.checkCrossRef = [];	//item keys that we need to check crossrefs for
 };
-bibtexIterator.ignoreTypes = ['comment', 'preamble'];
+
+//don't bother processing these entry types
+bibtexIterator.prototype.ignoreTypes = ['comment', 'preamble'];
+
 //get the next bibtexItem in BibTeX format
 //(i.e. fields are BibTeX fields and values are all converted to strings)
 //This might not be in order that items appear in the BibTeX file due to cross-references
@@ -113,6 +116,10 @@ bibtexIterator.prototype.next = function() {
 	return item;
 };
 
+/*************************
+ *** crossref handling ***
+ *************************/
+
 //fields to never map through crossref
 //based on http://ctan.mirrors.hoobly.com/macros/latex/contrib/biblatex/doc/biblatex.pdf Appendix B
 var crossrefSkipFields = ['crossref', 'xref', 'entryset', 'entrysubtype', 'execute', 'label',
@@ -210,7 +217,6 @@ var crossrefMap = {
 	crossrefMap.periodical.suppperiodical = crossrefMap.periodical.article;
 })();
 
-
 //supplements item fields given an item that was crossref'ed
 bibtexIterator.prototype.supplementItem = function(item, refItem) {
 	Zotero.debug("Supplementing item[" + item.fields._itemkey + "] with fields from item[" + refItem.fields._itemkey + "]");
@@ -236,6 +242,10 @@ bibtexIterator.prototype.supplementItem = function(item, refItem) {
 	}
 };
 
+/********************
+ *** END crossref ***
+ ********************/
+ 
 //read a value field and return a string
 //takes into account macros and string concatenation
 bibtexIterator.prototype.readValue = function(field, terminatingChars) {
