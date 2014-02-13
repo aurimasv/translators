@@ -17,7 +17,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-12 00:33:54"
+	"lastUpdated": "2014-02-12 17:03:50"
 }
 
 function detectImport() {
@@ -57,7 +57,7 @@ var processItemType = {
 	Bill: "bill",
 	"Book Section": "bookSection",
 	Book: "book",
-	Case: "case",
+	"Case": "case",
 	Catalog: "book",
 	"Computer Program": "computerProgram",
 	"Conference Proceedings": "conferencePaper", //still not clear on paper vs. proceedings
@@ -160,9 +160,8 @@ var exportItemType = {
 	blogPost: "Blog",
 	book: "Book",
 	bookSection: "Book Section",
-case :"Case",
-computerProgram:
-	"Computer Program",
+	"case" :"Case",
+	computerProgram: "Computer Program",
 	conferencePaper: "Conference Proceedings",
 	dictionaryEntry: "Dictionary",
 	document: "Generic",
@@ -240,7 +239,6 @@ var fieldMap = {
 	"short-title": "shortTitle",
 	"full-title": "publicationTitle",
 	language: "language",
-	"urls/web-urls/url": "url",
 	"access-date": "accessDate",
 	//These two are in the RIS - not sure what they'd be in Endnote XML
 	//DB:"archive",
@@ -286,7 +284,7 @@ var fieldMap = {
 		"artist": ["artwork"],
 		"cartographer": ["map"],
 		"composer": ["audioRecording"],
-		"director": ["film", "radioBroadcast", "tvBroadcast", "videoRecording"], //this clashes with audioRecording
+		"director": ["film", "radioBroadcast", "tvBroadcast", "videoRecording"],
 		"interviewee": ["interview"],
 		"inventor": ["patent"],
 		"podcaster": ["podcast"],
@@ -343,8 +341,8 @@ var fieldMap = {
 		country: ["patent"]
 	},
 	custom4: {
-		//	"creators/wordsBy":["audioRecording"], //not in spec
-		//	"creators/attorneyAgent":["patent"],
+		//RIS has this, but I can't find any reason for that: "creators/wordsBy":["audioRecording"], 
+		"creators/attorneyAgent":["patent"], //we're not using this for export
 		genre: ["film"]
 	},
 	custom5: {
@@ -358,9 +356,9 @@ var fieldMap = {
 
 	"pub-location": {
 		"__default": "place",
-		"__exclude": ["conferencePaper"] //should be exported as C1
+		"__exclude": ["conferencePaper"] //exported/imported as "custom1"
 	},
-	"pub-dates": { //also see PY when editing
+	"pub-dates": { //also see year when editing
 		"__default": "date",
 		dateEnacted: ["statute"],
 		dateDecided: ["case"],
@@ -368,7 +366,7 @@ var fieldMap = {
 	},
 	edition: {
 		"__default": "edition",
-		//		"__ignore":["journalArticle"], //EPubDate
+		//		"__ignore":["journalArticle"], //EPubDate.
 		session: ["bill", "hearing", "statute"],
 		version: ["computerProgram"]
 	},
@@ -401,7 +399,7 @@ var fieldMap = {
 	},
 	"num-vols": {
 		"__default": "numberOfVolumes",
-		"__exclude": ["bookSection"] //IS
+		"__exclude": ["bookSection"] //uses "issue" instead
 	},
 	"orig-pub": {
 		history: ["hearing", "statute", "bill", "case"],
@@ -419,7 +417,7 @@ var fieldMap = {
 		studio: ["videoRecording"],
 		network: ["radioBroadcast", "tvBroadcast"]
 	},
-	year: { //duplicate of DA, but this will only output year
+	year: { //duplicate of pud-dates, but this will only output year
 		"__default": "date",
 		dateEnacted: ["statute"],
 		dateDecided: ["case"],
@@ -436,7 +434,7 @@ var fieldMap = {
 		reportNumber: ["report"],
 	},
 	pages: {
-		"__default": "pages", //needs extra processing
+		"__default": "pages",
 		codePages: ["bill"], //bill
 		numPages: ["book", "thesis", "manuscript"],
 		firstPage: ["case"],
@@ -490,97 +488,6 @@ function getField(field, type) {
 	return zfield;
 }
 
-function htmlify(node) {
-	var htmlstr = "";
-	var htmltag = "";
-	htmlendtag = "";
-	(function repl(node) {
-		if (!node) {
-			return;
-		}
-		if (node.attributes &&
-			node.attributes.face) {
-			//we take the inner HTML of a node, add html tags around it or replace and embedded node. 
-			var string = node.innerHTML
-			if (node.attributes.face.value.indexOf("italic") != -1) {
-				var newstring = "<i>" + string + "</i>";
-				if (htmlstr.indexOf(node.outerHTML) != -1) {
-					htmlstr = htmlstr.replace(node.outerHTML, newstring);
-					string = "";
-					htmltag = "";
-					htmlendtag = ""
-				} else {
-					htmltag += "<i>";
-					htmlendtag += "</i>";
-				}
-			}
-			if (node.attributes.face.value.indexOf("bold") != -1) {
-				var newstring = "<b>" + string + "</b>";
-				if (htmlstr.indexOf(node.outerHTML) != -1) {
-					htmlstr = htmlstr.replace(node.outerHTML, newstring);
-					string = "";
-					htmltag = "";
-					htmlendtag = ""
-				} else {
-					htmltag += "<b>";
-					htmlendtag += "</b>";
-				}
-			}
-			if (node.attributes.face.value.indexOf("superscript") != -1) {
-				var newstring = "<sup>" + string + "</sup>";
-				if (htmlstr.indexOf(node.outerHTML) != -1) {
-					htmlstr = htmlstr.replace(node.outerHTML, newstring);
-					string = "";
-					htmltag = "";
-					htmlendtag = ""
-				} else {
-					htmltag += "<sup>";
-					htmlendtag += "</sup>";
-				}
-			}
-			if (node.attributes.face.value.indexOf("subscript") != -1) {
-				var newstring = "<sub>" + string + "</sub>";
-				if (htmlstr.indexOf(node.outerHTML) != -1) {
-					htmlstr = htmlstr.replace(node.outerHTML, newstring);
-					string = "";
-					htmltag = "";
-					htmlendtag = ""
-				} else {
-					htmltag += "<sub>";
-					htmlendtag += "</sub>";
-				}
-			}
-			htmlstr += htmltag + string + htmlendtag;
-		}
-		for (var i = 0; i < node.children.length; i++) {
-			repl(node.children[i], htmlstr);
-		}
-
-	})(node);
-	return htmlstr;
-}
-
-function processField(record, node) {
-	if (!node.textContent) return;
-	else {
-		var element = node.childNodes;
-		var content = "";
-		for (var i = 0; i < element.length; i++) {
-			//we want pure text nodes included so we can deal with mixed nodes
-			if (element[i].textContent) {
-				//for text notes just print the text
-				if (element[i].nodeType == 3) content += element[i].textContent;
-				//parse style nodes for 
-				else content += htmlify(element[i]);
-			}
-		}
-		//don't remove line breaks from abstracts
-		if (node.nodeName == "abstract") return content;
-		else return content.replace(/[\n\t]*/g, "");
-	}
-}
-
-
 function doImport() {
 	var xml = Zotero.getXML();
 
@@ -604,17 +511,17 @@ function doImport() {
 				if (zfield.indexOf("creators") != -1) {
 					var authortype = zfield.replace(/creators\//, "");
 					newItem.creators.push(ZU.cleanAuthor(node.textContent, authortype))
-				} else if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(record, node);
-				else notecache.push(field + ": " + processField(record, node))
+				} else if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(node);
+				else notecache.push(field + ": " + processField(node))
 			} else if (field == "titles" || field == "periodical" || field == "alt-periodical") {
 				for (var k = 0; k < node.children.length; k++) {
 					var subnode = node.children[k];
 					var subfield = subnode.nodeName;
 					if (zfield = getField(subfield, newItem.itemType)) {
 						//Z.debug(zfield)
-						if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(record, subnode);
-						else notecache.push(field + ": " + processField(record, subnode))
-					} else notecache.push(subfield + ": " + processField(record, subnode))
+						if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(subnode);
+						else notecache.push(field + ": " + processField(subnode))
+					} else notecache.push(subfield + ": " + processField(subnode))
 				}
 			} else if (field == "contributors") {
 				for (var k = 0; k < node.children.length; k++) {
@@ -625,9 +532,9 @@ function doImport() {
 						var creators = subnode.getElementsByTagName("author");
 						for (var l = 0; l < creators.length; l++) {
 							if (authortype) newItem.creators.push(ZU.cleanAuthor(creators[l].textContent, authortype, true))
-							else notecache.push(subfield + ": " + processField(record, subnode))
+							else notecache.push(subfield + ": " + processField(subnode))
 						}
-					} else notecache.push(subfield + ": " + processField(record, subnode))
+					} else notecache.push(subfield + ": " + processField(subnode))
 				}
 			} else if (field == "dates") {
 				var date = node.getElementsByTagName("pub-dates");
@@ -691,7 +598,7 @@ function doImport() {
 				}
 			} else if (field == "database" || field == "source-app" || field == "rec-number" || field == "ref-type" ||
 				field == "foreign-keys");
-			else notecache.push(node.nodeName + ": " + processField(record, node))
+			else notecache.push(node.nodeName + ": " + processField(node))
 
 		}
 		if (notecache.length > 0) newItem.notes.push(
@@ -737,6 +644,7 @@ function doExport() {
 		if (item.creators.length > 0) {
 			var contributors = doc.createElement("contributors");
 			for (var i = 0; i < authorFields.length; i++) {
+				var custom4 =[];
 				var type = getField(authorFields[i], item.itemType);
 				for (var j = 0; j < item.creators.length; j++) {
 					if (item.creators[j].creatorType == type) {
@@ -754,7 +662,16 @@ function doExport() {
 							mapProperty(creatornode, "author", name);
 						}
 					}
+					//deal with creators that are mapped to regular fields, currently only one
+					else if(item.creators[j].creatorType=="attorneyAgent"){						
+						var name = item.creators[j].lastName;
+						if (item.creators[j].firstName) name = name + ", " + item.creators[j].firstName;
+						custom4.push(name);
+					}
 				}
+			}
+			if (custom4){
+				mapProperty(record, "custom4", custom4.join("; "));
 			}
 			record.appendChild(contributors);
 		}
@@ -864,6 +781,89 @@ function doExport() {
 }
 
 
+//******IMPORT Functions
+
+/**
+ * Convert XML style elements to Zotero HTML mark-up
+ * Works with nested style nodes or with multiple styling descriptors in a single face attribute
+ *
+ * @param {node} a DOM element
+ *
+ * @return {String} String with HTML mark-up
+ */
+function htmlify(node) {
+	var	htmlstr ="";
+	var face = { italic: "i", bold: "b", superscript: "sup", subscript: "sub" };
+	(function repl(node) {
+		if (!node) {
+			return;
+		}
+		if (node.attributes && node.attributes.face){
+			//we take the inner HTML of a node, add html tags around it or replace an embedded node. 
+			var tags = node.attributes.face.value.split(/\s+/).map(function(f) { return face[f] || null; }).filter(function(v) { return v; });
+			var newstring = (tags.length ? '<' + tags.join('><') + '>' : '') + node.innerHTML + (tags.length ? '</' + tags.reverse().join('></') + '>' : '');
+			if (htmlstr.indexOf(node.outerHTML) != -1) {
+				htmlstr = htmlstr.replace(node.outerHTML, newstring);
+			} else {
+				htmlstr = newstring;
+			}
+		}
+		for (var i = 0; i < node.children.length; i++) {
+			repl(node.children[i], htmlstr);
+		}
+	})(node);
+	return htmlstr;
+}
+
+
+/**
+ * Convert Endnote XML style elements to text, if applicable including Zotero HTML mark-up
+ * @param {node} a DOM element
+ *
+ * @return {String} The text content
+ */
+function processField(node) {
+	if (!node.textContent) return;
+	else {
+		var element = node.childNodes;
+		var content = "";
+		for (var i = 0; i < element.length; i++) {
+			//we want pure text nodes included so we can deal with mixed nodes
+			if (element[i].textContent) {
+				//for text notes just print the text
+				if (element[i].nodeType == 3) content += element[i].textContent;
+				//parse style nodes for style elements
+				else content += htmlify(element[i]);
+			}
+		}
+		//don't remove line breaks from abstracts
+		if (node.nodeName == "abstract") return content;
+		else return content.replace(/[\n\t]*/g, "");
+	}
+}
+
+
+//**********EXPORT Functions
+/**
+ * Convert Zotero rich text markup to specified syntax`
+ *
+ * @param {String} str String to convert
+ * @param {Object} map A list of tags (in upper case) to convert.
+ *   e.g. {
+ *     B: {
+ *       open: '<style face="bold">',
+ *       close: '</style>'
+ *     },
+ *     SPAN: function(tag, attrs) {
+ *       if(tag == 'SPAN' && attrs.indexOf('style="font-variant:small-caps;"') != -1)
+ *         return { open: '<sc>', close: '</sc>' };
+ *     }
+ *   }
+ * @param {Function} [escapeStr] Function that is passed a string to escape special characters
+ *
+ * @return {String} String with Zotero markup converted
+ */
+ 
 
 /**
  * If property is defined, this function adds an appropriate XML element as a child of
@@ -902,26 +902,8 @@ function mapProperty(parentElement, elementName, property, attributes) {
 	parentElement.appendChild(newElement);
 	return newElement;
 }
-
-/**
- * Convert Zotero rich text markup to specified syntax`
- *
- * @param {String} str String to convert
- * @param {Object} map A list of tags (in upper case) to convert.
- *   e.g. {
- *     B: {
- *       open: '<style face="bold">',
- *       close: '</style>'
- *     },
- *     SPAN: function(tag, attrs) {
- *       if(tag == 'SPAN' && attrs.indexOf('style="font-variant:small-caps;"') != -1)
- *         return { open: '<sc>', close: '</sc>' };
- *     }
- *   }
- * @param {Function} [escapeStr] Function that is passed a string to escape special characters
- *
- * @return {String} String with Zotero markup converted
- */
+ 
+ 
 var convertZoteroMarkup = (function () {
 	var str, map, escapeStr, stack;
 
@@ -1270,13 +1252,11 @@ var testCases = [
 			{
 				"itemType": "journalArticle",
 				"creators": [],
-				"notes": [
-					"The following values have no corresponding Zotero field:<br/>copyright-dates: \n      "
-				],
+				"notes": [],
 				"tags": [],
 				"seeAlso": [],
 				"attachments": [],
-				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <i><b><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</i></b></sup>"
+				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
 			}
 		]
 	}
