@@ -10,14 +10,13 @@
 		"getCollections": "true"
 	},
 	"displayOptions": {
-		"exportCharset": "UTF-8",
 		"exportNotes": true,
 		"exportFileData": false
 	},
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-12 17:03:50"
+	"lastUpdated": "2014-02-16 14:26:14"
 }
 
 function detectImport() {
@@ -26,7 +25,9 @@ function detectImport() {
 
 	if (!doc) {
 		return false;
-	} else if (ZU.xpathText(doc, '//record/ref-type')) return true;
+	} else if (ZU.xpathText(doc, '//record/ref-type')) {
+		return true;
+	}
 }
 
 var fields = ["pages", "volume", "number", "issue", "num-vols", "orig-pub", "edition", "section",
@@ -503,7 +504,7 @@ function doImport() {
 		var notecache = [];
 		//Z.debug(newItem.itemType)
 		for (var j = 0; j < record.children.length; j++) {
-			var node = record.children[j]
+			var node = record.children[j];
 			var field = node.nodeName;
 			var zfield;
 
@@ -511,30 +512,46 @@ function doImport() {
 				if (zfield.indexOf("creators") != -1) {
 					var authortype = zfield.replace(/creators\//, "");
 					newItem.creators.push(ZU.cleanAuthor(node.textContent, authortype))
-				} else if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(node);
-				else notecache.push(field + ": " + processField(node))
+				} else if (ZU.fieldIsValidForType(zfield, newItem.itemType)) {
+					newItem[zfield] = processField(node);
+				}
+				else {
+					notecache.push(field + ": " + processField(node));
+				}
 			} else if (field == "titles" || field == "periodical" || field == "alt-periodical") {
 				for (var k = 0; k < node.children.length; k++) {
 					var subnode = node.children[k];
 					var subfield = subnode.nodeName;
 					if (zfield = getField(subfield, newItem.itemType)) {
 						//Z.debug(zfield)
-						if (ZU.fieldIsValidForType(zfield, newItem.itemType)) newItem[zfield] = processField(subnode);
-						else notecache.push(field + ": " + processField(subnode))
-					} else notecache.push(subfield + ": " + processField(subnode))
+						if (ZU.fieldIsValidForType(zfield, newItem.itemType)) {
+							newItem[zfield] = processField(subnode);
+						}
+						else {
+							notecache.push(field + ": " + processField(subnode));
+						}
+					} else {
+						notecache.push(subfield + ": " + processField(subnode));			
+					}
 				}
 			} else if (field == "contributors") {
 				for (var k = 0; k < node.children.length; k++) {
 					var subnode = node.children[k];
 					var subfield = subnode.nodeName;
-					if (getField(subfield, newItem.itemType)) {
-						var authortype = getField(subfield, newItem.itemType);
+					var authortype;
+					if (authortype = getField(subfield, newItem.itemType)) {
 						var creators = subnode.getElementsByTagName("author");
 						for (var l = 0; l < creators.length; l++) {
-							if (authortype) newItem.creators.push(ZU.cleanAuthor(creators[l].textContent, authortype, true))
-							else notecache.push(subfield + ": " + processField(subnode))
+							if (authortype) {
+								newItem.creators.push(ZU.cleanAuthor(creators[l].textContent, authortype, true));
+							}
+							else {
+								notecache.push(subfield + ": " + processField(subnode));
+							}
 						}
-					} else notecache.push(subfield + ": " + processField(subnode))
+					} else {
+						notecache.push(subfield + ": " + processField(subnode));
+					}
 				}
 			} else if (field == "dates") {
 				var date = node.getElementsByTagName("pub-dates");
@@ -565,11 +582,17 @@ function doImport() {
 				for (var k = 0; k < node.children.length; k++) {
 					var subnode = node.children[k];
 					var attachmenttype = "";
-					if (subnode.nodeName == "text-urls") attachmenttype = "text/html";
-					else if (subnode.nodeName == "web-urls") attachmenttype = "url";
-					else if (subnode.nodeName == "related-urls") attachmenttype = "link";
-					else if (subnode.nodeName == "pdf-urls") attachmenttype = "application/pdf";
-
+					switch(subnode.nodeName){
+						case "text-urls":
+						case "related-urls":
+							attachmenttype="text/html";
+							break;
+						case "web-urls":
+							attachmenttype="url";
+							break;
+						case "pdf-urls":
+							attachmenttype="application/pdf";
+					}
 					for (var l = 0; l < subnode.children.length; l++) {
 						if (subnode.children[l].nodeType == 3) continue;
 						var filepath = subnode.children[l].textContent;
@@ -577,32 +600,33 @@ function doImport() {
 						//support for EndNote's relative paths
 						filepath = filepath.replace(/^internal-pdf:\/\//i, 'PDF/').trim();
 						var filename = filepath.replace(/.+\//, "").replace(/\.[^\.]+$/, "");
-						if (attachmenttype == "url") newItem.url = subnode.textContent;
-						else if (attachmenttype == "link") newItem.attachments.push({
-							title: filename,
-							url: filepath,
-							mimetype: "text/html"
-						})
-						else newItem.attachments.push({
-							title: filename,
-							url: filepath,
-							mimetype: attachmenttype
-						})
+						if (attachmenttype == "url") {
+							newItem.url = subnode.textContent;
+						}
+						else {
+							newItem.attachments.push({
+								title: filename,
+								url: filepath,
+								mimetype: attachmenttype
+							})
+						}
 					}
 				}
-			} else if (field.search(/custom[2,3,7]/) != -1 && (newItem.itemType == "book" || newItem.itemType ==
-				"bookSection" || newItem.itemType == "journalArticle")) {
+			} else if (field.search(/custom[237]/) != -1 && 
+					(newItem.itemType == "book" || newItem.itemType ==  "bookSection" || newItem.itemType == "journalArticle")) {
 				//it'd be nice if we could do PMIDs as well, but doesn't look like they're mapped and we can't test for them reliably
-				if (node.textContent.search(/PMC\d+/) != -1) {
+				if (node.textContent.search(/PMC\d+/i) != -1) {
 					newItem.extra = "PMCID: " + node.textContent.match(/PMC\d+/i)[0];
 				}
-			} else if (field == "database" || field == "source-app" || field == "rec-number" || field == "ref-type" ||
-				field == "foreign-keys");
-			else notecache.push(node.nodeName + ": " + processField(node))
-
+			} else if (field == "database" || field == "source-app" || field == "rec-number" || field == "ref-type" 
+				|| field == "foreign-keys"); //skipping these fields
+			else {
+				notecache.push(node.nodeName + ": " + processField(node));
+			}
 		}
-		if (notecache.length > 0) newItem.notes.push(
-			"The following values have no corresponding Zotero field:<br/>" + notecache.join("<br/>"))
+		if (notecache.length > 0){ 
+			newItem.notes.push("The following values have no corresponding Zotero field:<br/>" + notecache.join("<br/>"))
+		}
 		newItem.complete();
 	}
 }
@@ -610,7 +634,8 @@ function doImport() {
 function doExport() {
 	Zotero.setCharacterSet("utf-8");
 	var parser = new DOMParser();
-	var doc = parser.parseFromString('<records/>', 'application/xml');
+	var doc = parser.parseFromString('<xml/>', 'application/xml');
+	var records = doc.createElement("records");
 
 	var item;
 	while (item = Zotero.nextItem()) {
@@ -645,32 +670,26 @@ function doExport() {
 			var contributors = doc.createElement("contributors");
 			for (var i = 0; i < authorFields.length; i++) {
 				var custom4 =[];
+				var creatornode = doc.createElement(authorFields[i]);
 				var type = getField(authorFields[i], item.itemType);
 				for (var j = 0; j < item.creators.length; j++) {
 					if (item.creators[j].creatorType == type) {
 						var name = item.creators[j].lastName;
-						if (item.creators[j].firstName) name = name + ", " + item.creators[j].firstName;
-						//The first time for a given creatortype create the parent node
-						if (contributors.getElementsByTagName(authorFields[i]).length == 0) {
-							var creatornode = doc.createElement(authorFields[i]);
-							mapProperty(creatornode, "author", name);
-							contributors.appendChild(creatornode);
-						}
-						//if we already have this type, just append. 
-						else {
-							var creatornode = contributors.getElementsByTagName(authorFields[i])[0];
-							mapProperty(creatornode, "author", name);
-						}
+						if (item.creators[j].firstName) name += ", " + item.creators[j].firstName;
+						mapProperty(creatornode, "author", name);
 					}
 					//deal with creators that are mapped to regular fields, currently only one
-					else if(item.creators[j].creatorType=="attorneyAgent"){						
+					else if(item.creators[j].creatorType=="attorneyAgent") {						
 						var name = item.creators[j].lastName;
-						if (item.creators[j].firstName) name = name + ", " + item.creators[j].firstName;
+						if (item.creators[j].firstName) name += ", " + item.creators[j].firstName;
 						custom4.push(name);
 					}
 				}
+				if (creatornode.hasChildNodes()) {
+					contributors.appendChild(creatornode);
+				}
 			}
-			if (custom4){
+			if (custom4.length>0){
 				mapProperty(record, "custom4", custom4.join("; "));
 			}
 			record.appendChild(contributors);
@@ -717,39 +736,37 @@ function doExport() {
 		}
 
 		if (item.attachments || item.url) {
+			var pdfurls = doc.createElement("pdf-urls");
 			var urls = doc.createElement("urls");
+			var texturls = doc.createElement("text-urls");
 			if (item.url) {
 				var weburls = doc.createElement("web-urls");
 				urls.appendChild(weburls);
 				mapProperty(weburls, "url", item.url);
 			}
-			for (var i in item.attachments) {
+			for (var i=0; i< item.attachments.length; i++) {
 				var attachment = item.attachments[i];
 				if (Zotero.getOption("exportFileData") && attachment.saveFile) {
 					attachment.saveFile(attachment.defaultPath, true);
 					if (attachment.mimeType == "application/pdf") {
-						if (urls.getElementsByTagName("pdf-urls").length == 0) {
-							var pdfurls = doc.createElement("pdf-urls");
+						if (!urls.pdfurls) {
 							urls.appendChild(pdfurls)
 						}
 						mapProperty(pdfurls, "url", attachment.defaultPath);
 					} else {
-						if (urls.getElementsByTagName("text-urls").length == 0) {
-							var texturls = doc.createElement("text-urls");
+						if (!urls.texturls) {
 							urls.appendChild(texturls)
 						}
 						mapProperty(texturls, "url", attachment.defaultPath);
 					}
 				} else if (attachment.localPath) {
 					if (attachment.mimeType == "application/pdf") {
-						if (urls.getElementsByTagName("pdf-urls").length == 0) {
-							var pdfurls = doc.createElement("pdf-urls");
+						if (!urls.pdfurls) {
 							urls.appendChild(pdfurls)
 						}
 						mapProperty(pdfurls, "url", attachment.localPath);
 					} else {
-						if (urls.getElementsByTagName("text-urls").length == 0) {
-							var texturls = doc.createElement("text-urls");
+						if (!urls.texturls) {
 							urls.appendChild(texturls)
 						}
 						mapProperty(texturls, "url", attachment.localPath);
@@ -767,15 +784,13 @@ function doExport() {
 		for (var i = 0; i < fields.length; i++) {
 			var field = fields[i]
 			var zfield = getField(field, item.itemType);
-			Z.debug(field + ": " + zfield);
+			//Z.debug(field + ": " + zfield);
 			if (item[zfield]) mapProperty(record, field, item[zfield]);
 		}
-
-
-		doc.documentElement.appendChild(record);
+		records.appendChild(record);
 	}
-
-	Zotero.write('<?xml version="1.0"?>' + "\n");
+	doc.documentElement.appendChild(records);
+	Zotero.write('<?xml version="1.0" encoding="UTF-8"?>' + "\n");
 	var serializer = new XMLSerializer();
 	Zotero.write(serializer.serializeToString(doc));
 }
