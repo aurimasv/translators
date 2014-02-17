@@ -466,9 +466,10 @@ function getField(field, type) {
 	if(cache[type][field] !== undefined) {
 		return cache[type][field];
 	}
-
+	
+	var zfield = false;
 	if (typeof (fieldMap[field]) == 'object') {
-		var def, zfield, exclude = false;
+		var def, exclude = false;
 		for (var f in fieldMap[field]) {
 			//__ignore is not handled here. It's returned as a Zotero field so it
 			//can be explicitly excluded from the note attachment
@@ -615,8 +616,7 @@ function doImport() {
 						var filename = filepath.replace(/.+\//, "").replace(/\.[^\.]+$/, "");
 						if (attachmenttype == "url") {
 							newItem.url = subnode.textContent;
-						}
-						else {
+						} else {
 							newItem.attachments.push({
 								title: filename,
 								url: filepath,
@@ -634,8 +634,7 @@ function doImport() {
 			} else if (field == "database" || field == "source-app" || field == "rec-number" || field == "ref-type" 
 				|| field == "foreign-keys"){
 					//skipping these fields
-				} 
-			else {
+			} else {
 				notecache.push(node.nodeName + ": " + processField(node));
 			}
 		}
@@ -751,46 +750,35 @@ function doExport() {
 		}
 
 		if (item.attachments || item.url) {
-			var pdfurls = doc.createElement("pdf-urls");
 			var urls = doc.createElement("urls");
+			var pdfurls = doc.createElement("pdf-urls");
 			var texturls = doc.createElement("text-urls");
 			if (item.url) {
 				var weburls = doc.createElement("web-urls");
 				urls.appendChild(weburls);
 				mapProperty(weburls, "url", item.url);
 			}
+			var exportFileData = Zotero.getOption("exportFileData");
 			for (var i=0; i< item.attachments.length; i++) {
 				var attachment = item.attachments[i];
-				if (Zotero.getOption("exportFileData") && attachment.saveFile) {
+				var path;
+				if ( exportFileData && attachment.saveFile) {
 					attachment.saveFile(attachment.defaultPath, true);
-					if (attachment.mimeType == "application/pdf") {
-						if (!urls.pdfurls) {
-							urls.appendChild(pdfurls)
-						}
-						mapProperty(pdfurls, "url", attachment.defaultPath);
-					} else {
-						if (!urls.texturls) {
-							urls.appendChild(texturls)
-						}
-						mapProperty(texturls, "url", attachment.defaultPath);
-					}
+					path = 'defaultPath';
 				} else if (attachment.localPath) {
-					if (attachment.mimeType == "application/pdf") {
-						if (!urls.pdfurls) {
-							urls.appendChild(pdfurls)
-						}
-						mapProperty(pdfurls, "url", attachment.localPath);
-					} else {
-						if (!urls.texturls) {
-							urls.appendChild(texturls)
-						}
-						mapProperty(texturls, "url", attachment.localPath);
-					}
-
+					path = 'localPath';
+				}
+				
+				if (attachment.mimeType == "application/pdf") {
+					mapProperty(pdfurls, "url", attachment[path]);
+				} else {
+					mapProperty(texturls, "url", attachment[path]);
 				}
 			}
-
-
+			
+			if(pdfurls.children.length) urls.appendChild(pdfurls);
+			if(texturls.children.length) urls.appendChild(texturls);
+			
 			record.appendChild(urls)
 		}
 
@@ -805,7 +793,7 @@ function doExport() {
 		records.appendChild(record);
 	}
 	doc.documentElement.appendChild(records);
-	Zotero.write('<?xml version="1.0" encoding="UTF-8"?>' + "\n");
+	Zotero.write('<?xml version="1.0" encoding="UTF-8"?>\n');
 	var serializer = new XMLSerializer();
 	Zotero.write(serializer.serializeToString(doc));
 }
@@ -821,27 +809,62 @@ function doExport() {
  *
  * @return {String} String with HTML mark-up
  */
-function htmlify(node) {
-	var	htmlstr ="";
-	var face = { italic: "i", bold: "b", superscript: "sup", subscript: "sub" };
-	(function repl(node) {
-		if (!node) {
-			return;
-		}
-		if (node.attributes && node.attributes.face){
-			//we take the inner HTML of a node, add html tags around it or replace an embedded node. 
-			var tags = node.attributes.face.value.split(/\s+/).map(function(f) { return face[f] || null; }).filter(function(v) { return v; });
-			var newstring = (tags.length ? '<' + tags.join('><') + '>' : '') + node.innerHTML + (tags.length ? '</' + tags.reverse().join('></') + '>' : '');
-			if (htmlstr.indexOf(node.outerHTML) != -1) {
-				htmlstr = htmlstr.replace(node.outerHTML, newstring);
-			} else {
-				htmlstr = newstring;
+var en2zMap = {
+	italic: 'i',
+	bold: 'b',
+	superscript: 'sup',
+	subscript: 'sub'
+};
+
+function htmlify(nodes) {
+	var htmlstr = "";
+	var formatting = [];
+	if(nodes.children.length == 1 && nodes.children[0].nodeType == 3) {
+		//single text node
+		return nodes.innerHTML;
+	}
+	
+	for(var i=0; i<nodes.children.length; i++) {
+		var node = nodes.children[i];
+		if(node.nodeType == 3) continue; //text nodes
+		
+		var face = node.getAttribute('face').split(/\s+/)
+			//filter out tags we don't care about
+			.filter(function(f) { return !!en2zMap[f] });
+		
+		//see what we're closing
+		var closing = [];
+		for(var j=0; j<formatting.length; j++) {
+			if(face.indexOf(formatting[j]) == -1) {
+				closing.push(en2zMap[formatting[j]]);
+				formatting.splice(j,1);
+				j--;
 			}
 		}
-		for (var i = 0; i < node.children.length; i++) {
-			repl(node.children[i], htmlstr);
+		if(closing.length) htmlstr += '</' + closing.reverse().join('></') + '>';
+		
+		//see what we're opening
+		var opening = [];
+		for(var j=0; j<face.length; j++) {
+			if(!en2zMap[face[j]]) continue;
+			
+			if(formatting.indexOf(face[j]) == -1) {
+				opening.push(en2zMap[face[j]]);
+				formatting.push(face[j]);
+			}
 		}
-	})(node);
+		if(opening.length) htmlstr += '<' + opening.join('><') + '>';
+		
+		htmlstr += node.innerHTML;
+	}
+	
+	//close left-over tags
+	var closing = [];
+	for(var j=0; j<formatting.length; j++) {
+		closing.push(en2zMap[formatting[j]]);
+	}
+	if(closing.length) htmlstr += '</' + closing.reverse().join('></') + '>';
+	
 	return htmlstr;
 }
 
@@ -853,48 +876,18 @@ function htmlify(node) {
  * @return {String} The text content
  */
 function processField(node) {
-	if (!node.textContent) return;
-	else {
-		var element = node.childNodes;
-		var content = "";
-		for (var i = 0; i < element.length; i++) {
-			//we want pure text nodes included so we can deal with mixed nodes
-			if (element[i].textContent) {
-				//for text notes just print the text
-				if (element[i].nodeType == 3) content += element[i].textContent;
-				//parse style nodes for style elements
-				else content += htmlify(element[i]);
-			}
-		}
+	if (!node.textContent) {
+		return '';
+	} else {
+		var content = htmlify(node);
 		//don't remove line breaks from abstracts
 		if (node.nodeName == "abstract") return content;
-		else return content.replace(/[\n\t]*/g, "");
+		else return ZU.trimInternal(content);
 	}
 }
 
 
 //**********EXPORT Functions
-/**
- * Convert Zotero rich text markup to specified syntax`
- *
- * @param {String} str String to convert
- * @param {Object} map A list of tags (in upper case) to convert.
- *   e.g. {
- *     B: {
- *       open: '<style face="bold">',
- *       close: '</style>'
- *     },
- *     SPAN: function(tag, attrs) {
- *       if(tag == 'SPAN' && attrs.indexOf('style="font-variant:small-caps;"') != -1)
- *         return { open: '<sc>', close: '</sc>' };
- *     }
- *   }
- * @param {Function} [escapeStr] Function that is passed a string to escape special characters
- *
- * @return {String} String with Zotero markup converted
- */
- 
-
 /**
  * If property is defined, this function adds an appropriate XML element as a child of
  * parentElement. Also converts elements with html mark-up to EndnoteXML style mark-up.
@@ -914,148 +907,117 @@ function mapProperty(parentElement, elementName, property, attributes) {
 			newElement.setAttribute(i, attributes[i]);
 		}
 	}
-	//if we don't have relevant tags, replace all html tags we can't do small caps anyway in Endnote XML, so remove those
-	//this will also catch all URIs, which don't have < and >
-	if (property.search(/\<(i|b|sup|sup)\>/) == -1) {
-		property = property.replace(/\<.+?\>/g, "")
-		newElement.appendChild(doc.createTextNode(property));
+	
+	var nodes = convertZoteroMarkup(property);
+	if(nodes.length == 1 && nodes[0].getAttribute('face') == 'normal') {
+		//no special formatting, skip the outer style node
+		newElement.appendChild(nodes[0].firstChild);
 	} else {
-		//we convert the markup to style elements and 
-		property = "<style face=\"normal\">" + convertZoteroMarkup(property, map, escapeStr) + "</style>";
-		//and then use this little trick to turn it into a DOM element
-		var tempdoc = doc.createElement('tempdoc');
-		tempdoc.innerHTML = property;
-		var xmlnode = tempdoc.firstChild;
-		newElement.appendChild(xmlnode);
+		for(var i=0; i<nodes.length; i++) {
+			newElement.appendChild(nodes[i]);
+		}
 	}
-
+	
 	parentElement.appendChild(newElement);
 	return newElement;
 }
- 
- 
-var convertZoteroMarkup = (function () {
-	var str, map, escapeStr, stack;
 
-	function closeOpenTags(closingTagOpenPos, closingTagStart) {
-		for (var j = stack.length - 1; j >= closingTagOpenPos; j--) {
-			var tag = stack.pop();
-			//take care of everything one level up preceeding this tag
-			var preStrFrom = (stack[j - 1].innerStrLastPos || stack[j - 1].pos + stack[j - 1].len - 1) + 1;
-			preStr = stack[j - 1].innerStr || '';
-
-			if (preStrFrom < tag.pos) {
-				//there is more to escape
-				preStr += escapeStr(str.substring(preStrFrom, tag.pos));
-			}
-
-			//take care of the inner string
-			var innerStrFrom = (tag.innerStrLastPos || tag.pos + tag.len - 1) + 1;
-			var innerStr = tag.innerStr || '';
-			if (innerStrFrom < closingTagStart) {
-				innerStr += escapeStr(str.substring(innerStrFrom, closingTagStart));
-			}
-
-			var toTag = map[tag.tag];
-			if (typeof toTag == 'function') toTag = toTag(tag.tag, tag.m[3] || '');
-
-			stack[j - 1].innerStr = preStr + toTag.open + innerStr + toTag.close;
-			stack[j - 1].innerStrLastPos = closingTagStart - 1;
+/**
+ * Convert Zotero rich text markup to EndNote XML
+ *
+ * @param {String} str String to convert
+ */
+var convertZoteroMarkup = (function() {
+	//mapping Zotero mark-up to EndNote
+	var map = {
+		I: ['italic'],
+		B: ['bold'],
+		SUP: ['superscript'],
+		SUB: ['subscript'],
+		SC: [],
+		SPAN: []
+	};
+	var doc = (new DOMParser()).parseFromString('<foo/>', 'application/xml');
+	
+	function createFormattedNode(str, format) {
+		var node = doc.createElement('style');
+		if(format.length) {
+			node.setAttribute('face', format.join(' '));
+		} else {
+			node.setAttribute('face', 'normal');
 		}
+		node.appendChild(doc.createTextNode(str));
+		return node;
 	}
-
-	return function () {
-		//set up environment
-		str = arguments[0];
-		map = arguments[1];
-		escapeStr = arguments[2] || function (s) {
-			return s
-		}; //noop by default
-
-		var tagRe = new RegExp('<(/?)(' + Object.keys(map).join('|') + ')(\s[^>]*)?>', 'i');
-		stack = [{
-			pos: 0,
-			len: 0
-		}]; //push an outside wrapper
-
-		var i = -1;
-		while ((i = str.indexOf('<', i + 1)) != -1) {
+	
+	var tagRe = new RegExp('<(/?)(' + Object.keys(map).join('|') + ')(\s[^>]*)?>', 'i');
+	
+	return function(str) {
+		var tags = [], formatting = [], currentStr = '', nextStrStart = 0,
+			nodes = [], i = -1;
+		while((i = str.indexOf('<', i + 1)) != -1) {
+			c--;
 			var m = ZU.XRegExp.exec(str, tagRe, i, true);
 			if (!m) continue;
-
-			if (!m[1]) {
+			
+			var tagName = m[2].toUpperCase();
+			var oldFormatting;
+			if(!m[1]) {
 				//opening tag
-				stack.push({
-					tag: m[2].toUpperCase(),
-					pos: i,
-					len: m[0].length,
-					m: m
+				//get new formatting that would be applied to text
+				var format = map[tagName];
+				if(!format) continue; //we're not supposed to process this
+				var formatDiff = ZU.arrayDiff(format, formatting);
+				
+				//push tag so that we know what we're closing later
+				tags.push({
+					tagName: tagName,
+					format: formatDiff
 				});
+				
+				oldFormatting = formatting;
+				formatting = formatting.concat(formatDiff);
 			} else {
 				//closing tag
-				//find last matching opening tag
-				var last = stack.length - 1;
-				while (last > 0 && stack[last].tag != m[2].toUpperCase()) {
-					last--;
+				//see if we opened this kind of tag
+				var j;
+				for(j=tags.length-1; j>=0; j--) {
+					if(tags[j].tagName == tagName) break;
 				}
-
-				if (last <= 0) continue; //tag was never opened, ignore
-
-				//close up open tags
-				closeOpenTags(last, i);
-				stack[stack.length - 1].innerStrLastPos += m[0].length;
+				if(j<0) continue; //never opened. Skip closing tag
+				
+				//close up tags
+				var tag, formatDiff = [];
+				do {
+					tag = tags.pop();
+					formatDiff = formatDiff.concat(tag.format);
+				} while(tag.tagName != tagName);
+				
+				oldFormatting = formatting;
+				formatting = ZU.arrayDiff(formatting, formatDiff);
 			}
-
+			
+			//attach substring up to tag
+			if(nextStrStart < i) currentStr += str.substring(nextStrStart, i);
+			nextStrStart = i + m[0].length; //just past the current tag
+			
+			if(formatDiff.length && currentStr) {
+				//formatting is changing, create a node for current formatting
+				nodes.push(createFormattedNode(currentStr, oldFormatting));
+				currentStr = '';
+			}
+			
 			i += m[0].length - 1;
 		}
-
-		closeOpenTags(1, str.length);
-
-		//process whatever is left at the top level
-		var newStr = stack[0].innerStr || '';
-		var lastStrPos = (stack[0].innerStrLastPos || -1) + 1;
-		if (lastStrPos < str.length) {
-			newStr += escapeStr(str.substring(lastStrPos));
-		}
-
-		return newStr;
+		
+		if(nextStrStart < str.length) currentStr += str.substring(nextStrStart);
+		if(currentStr) nodes.push(createFormattedNode(currentStr, formatting));
+		
+		return nodes;
 	};
 })();
 
-//character map formapping Zotero mark-up
-var map = {
-
-	I: {
-		open: '<style face="italic">',
-		close: '</style>'
-	},
-	B: {
-		open: '<style face="bold">',
-		close: '</style>'
-	},
-	SUP: {
-		open: '<style face="superscript">',
-		close: '</style>'
-	},
-	SUB: {
-		open: '<style face="subscript">',
-		close: '</style>'
-	},
-	SC: {
-		open: '',
-		close: ''
-	},
-	SPAN: {
-		open: '',
-		close: ''
-	}
-};
-
-var escapeStr = function (str) {
-	return str.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;');
-};/** BEGIN TEST CASES **/
+/** BEGIN TEST CASES **/
 var testCases = [
 	{
 		"type": "import",
