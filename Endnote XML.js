@@ -7,7 +7,7 @@
 	"maxVersion": "",
 	"priority": 100,
 	"configOptions": {
-		"getCollections": "true"
+		"getCollections": true
 	},
 	"displayOptions": {
 		"exportNotes": true,
@@ -16,7 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-16 14:26:14"
+	"lastUpdated": "2014-02-16 20:49:49"
 }
 
 function detectImport() {
@@ -30,6 +30,7 @@ function detectImport() {
 	}
 }
 
+//list of Endnote XML fields used for export (same for title, date, periodical, and author fields below)
 var fields = ["pages", "volume", "number", "issue", "num-vols", "orig-pub", "edition", "section",
 	"electronic-resource-num", "pub-location", "publisher", "isbn", "accession-num", "call-num", "report-id",
 	"abstract", "work-type", "meeting-place", "remote-database-name", "language", "access-date", "custom1",
@@ -455,8 +456,17 @@ var fieldMap = {
 	}
 };
 
+var cache = {};
 
 function getField(field, type) {
+	if(!cache[type]) cache[type] = {};
+
+	//retrieve from cache if available
+	//it can be false if previous search did not find a mapping
+	if(cache[type][field] !== undefined) {
+		return cache[type][field];
+	}
+
 	if (typeof (fieldMap[field]) == 'object') {
 		var def, zfield, exclude = false;
 		for (var f in fieldMap[field]) {
@@ -486,6 +496,7 @@ function getField(field, type) {
 	} else if (typeof (fieldMap[field]) == 'string') {
 		zfield = fieldMap[field];
 	}
+	cache[type][field] = zfield;
 	return zfield;
 }
 
@@ -501,6 +512,8 @@ function doImport() {
 		newItem.itemType = processItemType[ZU.xpathText(record, './/ref-type/@name')];
 		//fall back to ref-type number
 		if (!newItem.itemType) newItem.itemType = processNumberType[ZU.xpathText(record, './/ref-type')];
+		//fall back to journal Article if all else fails
+		if (!newItem.itemType) newItem.itemType = "journalArticle";
 		var notecache = [];
 		//Z.debug(newItem.itemType)
 		for (var j = 0; j < record.children.length; j++) {
@@ -571,7 +584,7 @@ function doImport() {
 				}
 
 			} else if (field == "notes" || field == "research-notes") {
-				newItem.notes.push(node.textContent.trim());
+				newItem.notes.push(processField(node));
 			} else if (field == "keywords") {
 				for (var k = 0; k < node.children.length; k++) {
 					var subnode = node.children[k];
@@ -607,7 +620,7 @@ function doImport() {
 							newItem.attachments.push({
 								title: filename,
 								url: filepath,
-								mimetype: attachmenttype
+								mimeType: attachmenttype
 							})
 						}
 					}
@@ -619,13 +632,15 @@ function doImport() {
 					newItem.extra = "PMCID: " + node.textContent.match(/PMC\d+/i)[0];
 				}
 			} else if (field == "database" || field == "source-app" || field == "rec-number" || field == "ref-type" 
-				|| field == "foreign-keys"); //skipping these fields
+				|| field == "foreign-keys"){
+					//skipping these fields
+				} 
 			else {
 				notecache.push(node.nodeName + ": " + processField(node));
 			}
 		}
 		if (notecache.length > 0){ 
-			newItem.notes.push("The following values have no corresponding Zotero field:<br/>" + notecache.join("<br/>"))
+			newItem.notes.push({note: "The following values have no corresponding Zotero field:<br/>" + notecache.join("<br/>"), tags: ['_EndnoteXML import']})
 		}
 		newItem.complete();
 	}
@@ -1067,7 +1082,7 @@ var testCases = [
 					{
 						"title": "Ahlquist and Breunig _ 2009 _ Country Clustering in Comparative Political Econom",
 						"url": "PDF/Ahlquist and Breunig _ 2009 _ Country Clustering in Comparative Political Econom.pdf",
-						"mimetype": "application/pdf"
+						"mimeType": "application/pdf"
 					}
 				],
 				"title": "Country Clustering in Comparative Political Economy",
@@ -1111,7 +1126,12 @@ var testCases = [
 					}
 				],
 				"notes": [
-					"The following values have no corresponding Zotero field:<br/>pub-location: New York"
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>pub-location: New York",
+						"tags": [
+							"_EndnoteXML import"
+						]
+					}
 				],
 				"tags": [],
 				"seeAlso": [],
@@ -1190,7 +1210,12 @@ var testCases = [
 					}
 				],
 				"notes": [
-					"The following values have no corresponding Zotero field:<br/>periodical: Varieties of capitalism. The institutional foundations of comparative advantage"
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>periodical: Varieties of capitalism. The institutional foundations of comparative advantage",
+						"tags": [
+							"_EndnoteXML import"
+						]
+					}
 				],
 				"tags": [],
 				"seeAlso": [],
@@ -1249,7 +1274,12 @@ var testCases = [
 				"itemType": "webpage",
 				"creators": [],
 				"notes": [
-					"The following values have no corresponding Zotero field:<br/>periodical: Citation Style Editor"
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>periodical: Citation Style Editor",
+						"tags": [
+							"_EndnoteXML import"
+						]
+					}
 				],
 				"tags": [],
 				"seeAlso": [],
