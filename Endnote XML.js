@@ -16,7 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-17 16:22:48"
+	"lastUpdated": "2014-02-17 16:38:05"
 }
 
 function detectImport() {
@@ -506,6 +506,8 @@ function doImport() {
 	var records = ZU.xpath(xml, "//record");
 	//Z.debug(records.length)
 	for (var i = 0, n = records.length; i < n; i++) {
+		Z.setProgress(i/n*100);
+		
 		var record = records[i];
 		newItem = new Zotero.Item();
 		//we prefer the name of the ref-type as it e.g. works with Mendeley and probably other Endnote 7 exports
@@ -828,9 +830,9 @@ function htmlify(nodes) {
 		var node = nodes.children[i];
 		var face = node.getAttribute('face')
 		if(face) {
-			face = face.split(/\s+/)
-				//filter out tags we don't care about
-				.filter(function(f) { return !!en2zMap[f] });
+		 face = face.split(/\s+/)
+			//filter out tags we don't care about
+			.filter(function(f) { return !!en2zMap[f] });
 		} else {
 			face = [];
 		}
@@ -959,7 +961,6 @@ var convertZoteroMarkup = (function() {
 		var tags = [], formatting = [], currentStr = '', nextStrStart = 0,
 			nodes = [], i = -1;
 		while((i = str.indexOf('<', i + 1)) != -1) {
-			c--;
 			var m = ZU.XRegExp.exec(str, tagRe, i, true);
 			if (!m) continue;
 			
