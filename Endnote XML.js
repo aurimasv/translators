@@ -16,7 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-17 16:08:48"
+	"lastUpdated": "2014-02-17 16:22:48"
 }
 
 function detectImport() {
@@ -826,9 +826,14 @@ function htmlify(nodes) {
 	
 	for(var i=0; i<nodes.children.length; i++) {
 		var node = nodes.children[i];
-		var face = node.getAttribute('face').split(/\s+/)
-			//filter out tags we don't care about
-			.filter(function(f) { return !!en2zMap[f] });
+		var face = node.getAttribute('face')
+		if(face) {
+			face = face.split(/\s+/)
+				//filter out tags we don't care about
+				.filter(function(f) { return !!en2zMap[f] });
+		} else {
+			face = [];
+		}
 		
 		//see what we're closing
 		var closing = [];
