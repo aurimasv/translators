@@ -16,11 +16,10 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-16 20:49:49"
+	"lastUpdated": "2014-02-17 16:08:48"
 }
 
 function detectImport() {
-
 	var doc = Zotero.getXML().documentElement;
 
 	if (!doc) {
@@ -819,15 +818,14 @@ var en2zMap = {
 function htmlify(nodes) {
 	var htmlstr = "";
 	var formatting = [];
-	if(nodes.children.length == 1 && nodes.children[0].nodeType == 3) {
+	
+	if(nodes.childNodes.length == 1 && nodes.childNodes[0].nodeType == 3) {
 		//single text node
-		return nodes.innerHTML;
+		return nodes.textContent;
 	}
 	
 	for(var i=0; i<nodes.children.length; i++) {
 		var node = nodes.children[i];
-		if(node.nodeType == 3) continue; //text nodes
-		
 		var face = node.getAttribute('face').split(/\s+/)
 			//filter out tags we don't care about
 			.filter(function(f) { return !!en2zMap[f] });
@@ -855,7 +853,7 @@ function htmlify(nodes) {
 		}
 		if(opening.length) htmlstr += '<' + opening.join('><') + '>';
 		
-		htmlstr += node.innerHTML;
+		htmlstr += node.textContent;
 	}
 	
 	//close left-over tags
@@ -1254,7 +1252,7 @@ var testCases = [
 	},
 	{
 		"type": "import",
-		"input": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<xml>\n  <records>\n    <record>\n      <database name=\"My EndNote Library.enl\" path=\"C:\\BACK_THIS_UP\\Desktop\\My EndNote Library.enl\">My EndNote Library.enl</database>\n      <source-app name=\"EndNote\" version=\"16.0\">EndNote</source-app>\n      <rec-number>1</rec-number>\n      <foreign-keys>\n    <key app=\"EN\" db-id=\"dstt999adpex2qeprz9xtt0fe2rrpwtarfwv\">1</key>\n      </foreign-keys>\n      <ref-type name=\"Journal Article\">17</ref-type>\n      <contributors>\n      </contributors>\n      <titles>\n\t<title>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\">Plain </style>\n\t  <style face=\"bold\" font=\"default\" size=\"100%\">Bold</style>\n\t  <style face=\"italic\" font=\"default\" size=\"100%\"> Italics</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"underline\" font=\"default\" size=\"100%\">Underline</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"superscript\" font=\"default\" size=\"100%\">Superscript</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"subscript\" font=\"default\" size=\"100%\">Subscript</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"Symbol\" charset=\"2\" size=\"100%\">SymbolFont</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"Courier New\" size=\"100%\">CourierNew</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"default\" size=\"7\">SmallerSize</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"default\" size=\"12\">Size12 </style>\n\t  <style face=\"bold italic underline superscript\" font=\"Times New Roman\" size=\"100%\">TimesNewRoman-Bold-Italics-Underline-Superscript</style>\n\t</title>\n      </titles>\n      <dates>\n      </dates>\n      <urls>\n      </urls>\n    </record>\n  </records>\n</xml>",
+		"input": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><xml><records><record><database name=\"My EndNote Library.enl\" path=\"C:\\BACK_THIS_UP\\Desktop\\My EndNote Library.enl\">My EndNote Library.enl</database><source-app name=\"EndNote\" version=\"16.0\">EndNote</source-app><rec-number>1</rec-number><foreign-keys><key app=\"EN\" db-id=\"dstt999adpex2qeprz9xtt0fe2rrpwtarfwv\">1</key></foreign-keys><ref-type name=\"Journal Article\">17</ref-type><contributors></contributors><titles><title><style face=\"normal\" font=\"default\" size=\"100%\">Plain </style><style face=\"bold\" font=\"default\" size=\"100%\">Bold</style><style face=\"italic\" font=\"default\" size=\"100%\"> Italics</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"underline\" font=\"default\" size=\"100%\">Underline</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"superscript\" font=\"default\" size=\"100%\">Superscript</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"subscript\" font=\"default\" size=\"100%\">Subscript</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"Symbol\" charset=\"2\" size=\"100%\">SymbolFont</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"Courier New\" size=\"100%\">CourierNew</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"default\" size=\"7\">SmallerSize</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"default\" size=\"12\">Size12 </style><style face=\"bold italic underline superscript\" font=\"Times New Roman\" size=\"100%\">TimesNewRoman-Bold-Italics-Underline-Superscript</style></title></titles><dates></dates><urls></urls></record></records></xml>",
 		"items": [
 			{
 				"itemType": "journalArticle",
