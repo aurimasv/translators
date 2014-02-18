@@ -16,11 +16,10 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-17 19:33:05"
+	"lastUpdated": "2014-02-17 16:38:05"
 }
 
 function detectImport() {
-
 	var doc = Zotero.getXML().documentElement;
 
 	if (!doc) {
@@ -507,6 +506,8 @@ function doImport() {
 	var records = ZU.xpath(xml, "//record");
 	//Z.debug(records.length)
 	for (var i = 0, n = records.length; i < n; i++) {
+		Z.setProgress(i/n*100);
+		
 		var record = records[i];
 		newItem = new Zotero.Item();
 		//we prefer the name of the ref-type as it e.g. works with Mendeley and probably other Endnote 7 exports
@@ -819,18 +820,22 @@ var en2zMap = {
 function htmlify(nodes) {
 	var htmlstr = "";
 	var formatting = [];
+	
 	if(nodes.childNodes.length == 1 && nodes.childNodes[0].nodeType == 3) {
 		//single text node
-		return nodes.innerHTML;
+		return nodes.textContent;
 	}
 	
 	for(var i=0; i<nodes.children.length; i++) {
 		var node = nodes.children[i];
-		if(node.nodeType == 3) continue; //text nodes
-		
-		var face = node.getAttribute('face').split(/\s+/)
+		var face = node.getAttribute('face')
+		if(face) {
+		 face = face.split(/\s+/)
 			//filter out tags we don't care about
 			.filter(function(f) { return !!en2zMap[f] });
+		} else {
+			face = [];
+		}
 		
 		//see what we're closing
 		var closing = [];
@@ -855,7 +860,7 @@ function htmlify(nodes) {
 		}
 		if(opening.length) htmlstr += '<' + opening.join('><') + '>';
 		
-		htmlstr += node.innerHTML;
+		htmlstr += node.textContent;
 	}
 	
 	//close left-over tags
@@ -871,7 +876,6 @@ function htmlify(nodes) {
 
 /**
  * Convert Endnote XML style elements to text, if applicable including Zotero HTML mark-up
- * Convert XML escaped characters to regular chars
  * @param {node} a DOM element
  *
  * @return {String} The text content
@@ -881,8 +885,6 @@ function processField(node) {
 		return '';
 	} else {
 		var content = htmlify(node);
-		//decode XML special characters
-		content = content.replace(/\&amp;/, "&").replace(/\&lt;/, "<").replace(/\&gt;/, ">");
 		//don't remove line breaks from abstracts
 		if (node.nodeName == "abstract") return content;
 		else return ZU.trimInternal(content);
@@ -959,7 +961,6 @@ var convertZoteroMarkup = (function() {
 		var tags = [], formatting = [], currentStr = '', nextStrStart = 0,
 			nodes = [], i = -1;
 		while((i = str.indexOf('<', i + 1)) != -1) {
-			c--;
 			var m = ZU.XRegExp.exec(str, tagRe, i, true);
 			if (!m) continue;
 			
@@ -1257,7 +1258,7 @@ var testCases = [
 	},
 	{
 		"type": "import",
-		"input": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<xml>\n  <records>\n    <record>\n      <database name=\"My EndNote Library.enl\" path=\"C:\\BACK_THIS_UP\\Desktop\\My EndNote Library.enl\">My EndNote Library.enl</database>\n      <source-app name=\"EndNote\" version=\"16.0\">EndNote</source-app>\n      <rec-number>1</rec-number>\n      <foreign-keys>\n    <key app=\"EN\" db-id=\"dstt999adpex2qeprz9xtt0fe2rrpwtarfwv\">1</key>\n      </foreign-keys>\n      <ref-type name=\"Journal Article\">17</ref-type>\n      <contributors>\n      </contributors>\n      <titles>\n\t<title>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\">Plain </style>\n\t  <style face=\"bold\" font=\"default\" size=\"100%\">Bold</style>\n\t  <style face=\"italic\" font=\"default\" size=\"100%\"> Italics</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"underline\" font=\"default\" size=\"100%\">Underline</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"superscript\" font=\"default\" size=\"100%\">Superscript</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"subscript\" font=\"default\" size=\"100%\">Subscript</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"Symbol\" charset=\"2\" size=\"100%\">SymbolFont</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"Courier New\" size=\"100%\">CourierNew</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"default\" size=\"7\">SmallerSize</style>\n\t  <style face=\"normal\" font=\"default\" size=\"100%\"> \n\t  </style>\n\t  <style face=\"normal\" font=\"default\" size=\"12\">Size12 </style>\n\t  <style face=\"bold italic underline superscript\" font=\"Times New Roman\" size=\"100%\">TimesNewRoman-Bold-Italics-Underline-Superscript</style>\n\t</title>\n      </titles>\n      <dates>\n      </dates>\n      <urls>\n      </urls>\n    </record>\n  </records>\n</xml>",
+		"input": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><xml><records><record><database name=\"My EndNote Library.enl\" path=\"C:\\BACK_THIS_UP\\Desktop\\My EndNote Library.enl\">My EndNote Library.enl</database><source-app name=\"EndNote\" version=\"16.0\">EndNote</source-app><rec-number>1</rec-number><foreign-keys><key app=\"EN\" db-id=\"dstt999adpex2qeprz9xtt0fe2rrpwtarfwv\">1</key></foreign-keys><ref-type name=\"Journal Article\">17</ref-type><contributors></contributors><titles><title><style face=\"normal\" font=\"default\" size=\"100%\">Plain </style><style face=\"bold\" font=\"default\" size=\"100%\">Bold</style><style face=\"italic\" font=\"default\" size=\"100%\"> Italics</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"underline\" font=\"default\" size=\"100%\">Underline</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"superscript\" font=\"default\" size=\"100%\">Superscript</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"subscript\" font=\"default\" size=\"100%\">Subscript</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"Symbol\" charset=\"2\" size=\"100%\">SymbolFont</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"Courier New\" size=\"100%\">CourierNew</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"default\" size=\"7\">SmallerSize</style><style face=\"normal\" font=\"default\" size=\"100%\"> </style><style face=\"normal\" font=\"default\" size=\"12\">Size12 </style><style face=\"bold italic underline superscript\" font=\"Times New Roman\" size=\"100%\">TimesNewRoman-Bold-Italics-Underline-Superscript</style></title></titles><dates></dates><urls></urls></record></records></xml>",
 		"items": [
 			{
 				"itemType": "journalArticle",
@@ -1266,7 +1267,7 @@ var testCases = [
 				"tags": [],
 				"seeAlso": [],
 				"attachments": [],
-				"title": "Plain <b>Bold</b><i> Italics</i> Underline <sup>Superscript</sup> <sub>Subscript</sub> SymbolFont CourierNew SmallerSize Size12 <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
+				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
 			}
 		]
 	}
