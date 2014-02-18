@@ -16,7 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-17 16:38:05"
+	"lastUpdated": "2014-02-17 21:49:54"
 }
 
 function detectImport() {
@@ -830,9 +830,9 @@ function htmlify(nodes) {
 		var node = nodes.children[i];
 		var face = node.getAttribute('face')
 		if(face) {
-		 face = face.split(/\s+/)
-			//filter out tags we don't care about
-			.filter(function(f) { return !!en2zMap[f] });
+			face = face.split(/\s+/)
+				//filter out tags we don't care about
+				.filter(function(f) { return !!en2zMap[f] });
 		} else {
 			face = [];
 		}
@@ -1267,7 +1267,7 @@ var testCases = [
 				"tags": [],
 				"seeAlso": [],
 				"attachments": [],
-				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
+				"title": "Plain <b>Bold</b><i> Italics</i> Underline <sup>Superscript</sup> <sub>Subscript</sub> SymbolFont CourierNew SmallerSize Size12 <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
 			}
 		]
 	}
