@@ -16,11 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-<<<<<<< HEAD
-	"lastUpdated": "2014-02-17 19:33:05"
-=======
 	"lastUpdated": "2014-02-17 16:38:05"
->>>>>>> df8a9a2fbc5673141536f0f81b57cf91c729e73a
 }
 
 function detectImport() {
@@ -824,10 +820,7 @@ var en2zMap = {
 function htmlify(nodes) {
 	var htmlstr = "";
 	var formatting = [];
-<<<<<<< HEAD
-=======
 	
->>>>>>> df8a9a2fbc5673141536f0f81b57cf91c729e73a
 	if(nodes.childNodes.length == 1 && nodes.childNodes[0].nodeType == 3) {
 		//single text node
 		return nodes.textContent;
@@ -883,7 +876,6 @@ function htmlify(nodes) {
 
 /**
  * Convert Endnote XML style elements to text, if applicable including Zotero HTML mark-up
- * Convert XML escaped characters to regular chars
  * @param {node} a DOM element
  *
  * @return {String} The text content
@@ -893,8 +885,6 @@ function processField(node) {
 		return '';
 	} else {
 		var content = htmlify(node);
-		//decode XML special characters
-		content = content.replace(/\&amp;/, "&").replace(/\&lt;/, "<").replace(/\&gt;/, ">");
 		//don't remove line breaks from abstracts
 		if (node.nodeName == "abstract") return content;
 		else return ZU.trimInternal(content);
@@ -1277,7 +1267,7 @@ var testCases = [
 				"tags": [],
 				"seeAlso": [],
 				"attachments": [],
-				"title": "Plain <b>Bold</b><i> Italics</i> Underline <sup>Superscript</sup> <sub>Subscript</sub> SymbolFont CourierNew SmallerSize Size12 <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
+				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
 			}
 		]
 	}
