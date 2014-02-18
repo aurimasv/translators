@@ -16,7 +16,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "g",
-	"lastUpdated": "2014-02-16 20:49:49"
+	"lastUpdated": "2014-02-17 19:33:05"
 }
 
 function detectImport() {
@@ -819,7 +819,7 @@ var en2zMap = {
 function htmlify(nodes) {
 	var htmlstr = "";
 	var formatting = [];
-	if(nodes.children.length == 1 && nodes.children[0].nodeType == 3) {
+	if(nodes.childNodes.length == 1 && nodes.childNodes[0].nodeType == 3) {
 		//single text node
 		return nodes.innerHTML;
 	}
@@ -871,6 +871,7 @@ function htmlify(nodes) {
 
 /**
  * Convert Endnote XML style elements to text, if applicable including Zotero HTML mark-up
+ * Convert XML escaped characters to regular chars
  * @param {node} a DOM element
  *
  * @return {String} The text content
@@ -880,6 +881,8 @@ function processField(node) {
 		return '';
 	} else {
 		var content = htmlify(node);
+		//decode XML special characters
+		content = content.replace(/\&amp;/, "&").replace(/\&lt;/, "<").replace(/\&gt;/, ">");
 		//don't remove line breaks from abstracts
 		if (node.nodeName == "abstract") return content;
 		else return ZU.trimInternal(content);
@@ -1263,7 +1266,7 @@ var testCases = [
 				"tags": [],
 				"seeAlso": [],
 				"attachments": [],
-				"title": "Plain   <b>Bold</b>  <i> Italics</i>       Underline       <sup>Superscript</sup>       <sub>Subscript</sub>       SymbolFont       CourierNew       SmallerSize       Size12   <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
+				"title": "Plain <b>Bold</b><i> Italics</i> Underline <sup>Superscript</sup> <sub>Subscript</sub> SymbolFont CourierNew SmallerSize Size12 <b><i><sup>TimesNewRoman-Bold-Italics-Underline-Superscript</sup></i></b>"
 			}
 		]
 	}
