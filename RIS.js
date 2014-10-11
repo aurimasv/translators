@@ -17,7 +17,7 @@
 	"inRepository": true,
 	"translatorType": 3,
 	"browserSupport": "gcsv",
-	"lastUpdated": "2014-06-10 04:10:54"
+	"lastUpdated": "2014-10-11 02:34:21"
 }
 
 function detectImport() {
@@ -1159,6 +1159,8 @@ function processTag(item, tagValue, risEntry) {
 	var tag = tagValue.tag;
 	var value = tagValue.value.trim();
 	var rawLine = tagValue.raw;
+	
+	var diff = 0; // Change in entry row count if we add/delete a row
 
 	var zField = importFields.getField(item.itemType, tag);
 	if(!zField) {
@@ -1167,7 +1169,7 @@ function processTag(item, tagValue, risEntry) {
 	}
 
 	//drop empty fields
-	if (value === "" || !zField) return;
+	if (value === "" || !zField) return diff;
 
 	zField = zField.split('/');
 
@@ -1309,13 +1311,28 @@ function processTag(item, tagValue, risEntry) {
 					
 					//get title from file name
 					title = url.match(/([^\/\\]+)(?:\.\w{1,8})$/);
-					if(title) title = decodeURIComponent(title[1]);
-					else title = "Attachment";
+					if(title) {
+						title = decodeURIComponent(title[1]);
+					}
 					
 					if(zField[1] == 'HTML') {
 						title = "Full Text (HTML)";
 						mimeType = "text/html";
+					} else if (zField[1] == 'other') {
+						// Figure. Use caption for title
+						if (risEntry.tags.CA) {
+							var caption = risEntry.tags.CA.shift();
+							if (!risEntry.tags.CA.length) delete risEntry.tags.CA.length;
+							risEntry.splice(risEntry.indexOf(caption), 1);
+							diff--;
+							
+							title = 'Figure: ' + caption.value;
+						} else {
+							title = 'Figure' + ( title ? ': ' + title : '');
+						}
 					}
+					
+					if (!title) title = "Attachment";
 					
 					item.attachments.push({
 						title: title,
@@ -1336,6 +1353,7 @@ function processTag(item, tagValue, risEntry) {
 	}
 
 	applyValue(item, zField[0], value, rawLine);
+	return diff;
 }
 
 function applyValue(item, zField, value, rawLine) {
@@ -1610,7 +1628,7 @@ function completeItem(item) {
 	}
 	item.unsupportedFields = undefined;
 	item.unknownFields = undefined;
-
+Z.debug(item);
 	item.complete();
 }
 
@@ -1867,6 +1885,7 @@ var testCases = [
 		"items": [
 			{
 				"itemType": "journalArticle",
+				"title": "Blood-brain barrier breach following cortical contusion in the rat",
 				"creators": [
 					{
 						"lastName": "Baldwin",
@@ -1894,6 +1913,21 @@ var testCases = [
 						"creatorType": "author"
 					}
 				],
+				"date": "1996",
+				"abstractNote": "Adult Fisher 344 rats were subjected to a unilateral impact to the dorsal cortex above the hippocampus at 3.5 m/sec with a 2 mm cortical depression. This caused severe cortical damage and neuronal loss in hippocampus subfields CA1, CA3 and hilus. Breakdown of the blood-brain barrier (BBB) was assessed by injecting the protein horseradish peroxidase (HRP) 5 minutes prior to or at various times following injury (5 minutes, 1, 2, 6, 12 hours, 1, 2, 5, and 10 days). Animals were killed 1 hour after HRP injection and brain sections were reacted with diaminobenzidine to visualize extravascular accumulation of the protein. Maximum staining occurred in animals injected with HRP 5 minutes prior to or 5 minutes after cortical contusion. Staining at these time points was observed in the ipsilateral hippocampus. Some modest staining occurred in the dorsal contralateral cortex near the superior sagittal sinus. Cortical HRP stain gradually decreased at increasing time intervals postinjury. By 10 days, no HRP stain was observed in any area of the brain. In the ipsilateral hippocampus, HRP stain was absent by 3 hours postinjury and remained so at the 6- and 12- hour time points. Surprisingly, HRP stain was again observed in the ipsilateral hippocampus 1 and 2 days following cortical contusion, indicating a biphasic opening of the BBB following head trauma and a possible second wave of secondary brain damage days after the contusion injury. These data indicate regions not initially destroyed by cortical impact, but evidencing BBB breach, may be accessible to neurotrophic factors administered intravenously both immediately and days after brain trauma.",
+				"journalAbbreviation": "J.Neurosurg.",
+				"pages": "476-481",
+				"publicationTitle": "J.Neurosurg.",
+				"volume": "85",
+				"attachments": [],
+				"tags": [
+					"blood-brain barrier",
+					"cortical contusion",
+					"head trauma",
+					"hippocampus",
+					"horseradish peroxidase",
+					"rat"
+				],
 				"notes": [
 					{
 						"note": "The following values have no corresponding Zotero field:<br/>RP  - Not In File<br/>",
@@ -1902,23 +1936,7 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"cortical contusion",
-					"blood-brain barrier",
-					"horseradish peroxidase",
-					"head trauma",
-					"hippocampus",
-					"rat"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"title": "Blood-brain barrier breach following cortical contusion in the rat",
-				"journalAbbreviation": "J.Neurosurg.",
-				"date": "1996",
-				"volume": "85",
-				"pages": "476-481",
-				"abstractNote": "Adult Fisher 344 rats were subjected to a unilateral impact to the dorsal cortex above the hippocampus at 3.5 m/sec with a 2 mm cortical depression. This caused severe cortical damage and neuronal loss in hippocampus subfields CA1, CA3 and hilus. Breakdown of the blood-brain barrier (BBB) was assessed by injecting the protein horseradish peroxidase (HRP) 5 minutes prior to or at various times following injury (5 minutes, 1, 2, 6, 12 hours, 1, 2, 5, and 10 days). Animals were killed 1 hour after HRP injection and brain sections were reacted with diaminobenzidine to visualize extravascular accumulation of the protein. Maximum staining occurred in animals injected with HRP 5 minutes prior to or 5 minutes after cortical contusion. Staining at these time points was observed in the ipsilateral hippocampus. Some modest staining occurred in the dorsal contralateral cortex near the superior sagittal sinus. Cortical HRP stain gradually decreased at increasing time intervals postinjury. By 10 days, no HRP stain was observed in any area of the brain. In the ipsilateral hippocampus, HRP stain was absent by 3 hours postinjury and remained so at the 6- and 12- hour time points. Surprisingly, HRP stain was again observed in the ipsilateral hippocampus 1 and 2 days following cortical contusion, indicating a biphasic opening of the BBB following head trauma and a possible second wave of secondary brain damage days after the contusion injury. These data indicate regions not initially destroyed by cortical impact, but evidencing BBB breach, may be accessible to neurotrophic factors administered intravenously both immediately and days after brain trauma.",
-				"publicationTitle": "J.Neurosurg."
+				"seeAlso": []
 			}
 		]
 	},
@@ -1928,6 +1946,7 @@ var testCases = [
 		"items": [
 			{
 				"itemType": "patent",
+				"title": "Method of detecting AIDS virus infection",
 				"creators": [
 					{
 						"lastName": "Burger",
@@ -1940,6 +1959,21 @@ var testCases = [
 						"creatorType": "inventor"
 					}
 				],
+				"issueDate": "February 27, 1990",
+				"abstractNote": "A method is disclosed for detecting the presence of HTLV III infected cells in a medium. The method comprises contacting the medium with monoclonal antibodies against an antigen produced as a result of the infection and detecting the binding of the antibodies to the antigen. The antigen may be a gene product of the HTLV III virus or may be bound to such gene product. On the other hand the antigen may not be a viral gene product but may be produced as a result of the infection and may further be bound to a lymphocyte. The medium may be a human body fluid or a culture medium. A particular embodiment of the present method involves a method for determining the presence of a AIDS virus in a person. The method comprises combining a sample of a body fluid from the person with a monoclonal antibody that binds to an antigen produced as a result of the infection and detecting the binding of the monoclonal antibody to the antigen. The presence of the binding indicates the presence of a AIDS virus infection. Also disclosed are novel monoclonal antibodies, noval compositions of matter, and novel diagnostic kits",
+				"accessDate": "1986-06-23",
+				"applicationNumber": "G01N 33/569 G01N 33/577",
+				"assignee": "4,629,783",
+				"extra": "435/5 424/3 424/7.1 435/7 435/29 435/32 435/70.21 435/240.27 435/172.2 530/387 530/808 530/809 935/110",
+				"issuingAuthority": "Epitope,I.",
+				"place": "OR",
+				"attachments": [],
+				"tags": [
+					"AIDS",
+					"antigens",
+					"infection",
+					"virus"
+				],
 				"notes": [
 					{
 						"note": "The following values have no corresponding Zotero field:<br/>Patent Version Number: 877609<br/>IS  - 4,904,581<br/>RP  - Not In File<br/>",
@@ -1948,2497 +1982,7 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"AIDS",
-					"virus",
-					"infection",
-					"antigens"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"title": "Method of detecting AIDS virus infection",
-				"issueDate": "February 27, 1990",
-				"issuingAuthority": "Epitope,I.",
-				"place": "OR",
-				"assignee": "4,629,783",
-				"accessDate": "1986-06-23",
-				"applicationNumber": "G01N 33/569 G01N 33/577",
-				"extra": "435/5 424/3 424/7.1 435/7 435/29 435/32 435/70.21 435/240.27 435/172.2 530/387 530/808 530/809 935/110",
-				"abstractNote": "A method is disclosed for detecting the presence of HTLV III infected cells in a medium. The method comprises contacting the medium with monoclonal antibodies against an antigen produced as a result of the infection and detecting the binding of the antibodies to the antigen. The antigen may be a gene product of the HTLV III virus or may be bound to such gene product. On the other hand the antigen may not be a viral gene product but may be produced as a result of the infection and may further be bound to a lymphocyte. The medium may be a human body fluid or a culture medium. A particular embodiment of the present method involves a method for determining the presence of a AIDS virus in a person. The method comprises combining a sample of a body fluid from the person with a monoclonal antibody that binds to an antigen produced as a result of the infection and detecting the binding of the monoclonal antibody to the antigen. The presence of the binding indicates the presence of a AIDS virus infection. Also disclosed are novel monoclonal antibodies, noval compositions of matter, and novel diagnostic kits"
-			}
-		]
-	},
-	{
-		"type": "import",
-		"input": "TY  - AGGR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Date Published\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Publication Number\nM3  - Type of Work\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - ResearchNotes\nSE  - Screens\nSN  - ISSN/ISBN\nSP  - Pages\nST  - Short Title\nT2  - Periodical\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 2\nER  - \n\n\nTY  - ANCIENT\nA2  - Editor\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviated Publication\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Text Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - ResearchNotes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Publication Title\nT3  - Volume Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 3\nER  - \n\n\nTY  - ART\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Artist\nC3  - Size/Length\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDP  - Database Provider\nDO  - DOI\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Size\nM3  - Type of Work\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nST  - Short Title\nTI  - Title\nTT  - Translated Title\nTA  - Author, Translated\nUR  - URL\nY2  - Access Date\nID  - 4\nER  - \n\n\nTY  - ADVS\nA2  - Performers\nA3  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Cast\nC2  - Credits\nC3  - Size/Length\nC5  - Format\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type\nN1  - Notes\nNV  - Extent of Work\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nST  - Short Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 5\nER  - \n\n\nTY  - BILL\nA2  - Sponsor\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nCA  - Caption\nCN  - Call Number\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nN1  - Notes\nM1  - Bill Number\nOP  - History\nPY  - Year\nRN  - Research Notes\nSE  - Code Section\nSP  - Code Pages\nST  - Short Title\nT2  - Code\nT3  - Legislative Body\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Code Volume\nY2  - Access Date\nID  - 6\nER  - \n\n\nTY  - BLOG\nA2  - Editor\nA3  - Illustrator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Author Affiliation\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Last Update Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Type of Medium\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Message Number\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Title of WebLog\nT3  - Institution\nTA  - Author, Translated\nTI  - Title of Entry\nTT  - Translated Title\nUR  - URL\nVL  - Access Year\nY2  - Number\nID  - 7\nER  - \n\n\nTY  - BOOK\nA2  - Editor, Series\nA3  - Editor\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC3  - Title Prefix\nC4  - Reviewer\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Pages\nSN  - ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 8\nER  - \n\n\nTY  - CHAP\nA2  - Editor\nA3  - Editor, Series\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Section\nC3  - Title Prefix\nC4  - Reviewer\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number of Volumes\nOP  - Original Publication\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Chapter\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nSV  - Series Volume\nT2  - Book Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 9\nER  - \n\n\nTY  - CASE\nA2  - Reporter\nA3  - Court, Higher\nA4  - Counsel\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nCA  - Caption\nCN  - Call Number\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Action of Higher Court\nJ2  - Parallel Citation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Citation of Reversal\nN1  - Notes\nNV  - Reporter Abbreviation\nOP  - History\nPB  - Court\nPY  - Year Decided\nRN  - ResearchNotes\nSE  - Filed Date\nSP  - First Page\nST  - Abbreviated Case Name\nSV  - Docket Number\nT3  - Decision\nTA  - Author, Translated\nTI  - Case Name\nTT  - Translated Title\nUR  - URL\nVL  - Reporter Volume\nID  - 10\nER  - \n\n\nTY  - CTLG\nA2  - Institution\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Catalog Number\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Number of Pages\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 11\nER  - \n\n\nTY  - CHART\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - By, Created\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 12\nER  - \n\n\nTY  - CLSWK\nA2  - Editor, Series\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Attribution\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISSN/ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 23\nER  - \n\n\nTY  - COMP\nA2  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Programmer\nC1  - Computer\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Type\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Edition\nY2  - Access Date\nID  - 14\nER  - \n\n\nTY  - CPAPER\nA2  - Editor\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Place Published\nCA  - Caption\nCY  - Conference Location\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Issue\nM3  - Type\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nT2  - Conference Name\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 15\nER  - \n\n\nTY  - CONF\nA2  - Editor\nA3  - Editor, Series\nA4  - Sponsor\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Place Published\nC2  - Year Published\nC3  - Proceedings Title\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Conference Location\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Issue\nN1  - Notes\nNV  - Number of Volumes\nOP  - Source\nPB  - Publisher\nPY  - Year of Conference\nRN  - Research Notes\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Conference Name\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 16\nER  - \n\n\nTY  - DATA\nA2  - Producer\nA4  - Agency, Funding\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Investigators\nC1  - Time Period\nC2  - Unit of Observation\nC3  - Data Type\nC4  - Dataset(s)\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date of Collection\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nN1  - Notes\nNV  - Study Number\nOP  - Version History\nPB  - Distributor\nPY  - Year\nRI  - Geographic Coverage\nRN  - Research Notes\nSE  - Original Release Date\nSN  - ISSN\nST  - Short Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 17\nER  - \n\n\nTY  - DICT\nA2  - Editor\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Term\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Version\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Dictionary Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 13\nER  - \n\n\nTY  - EDBOOK\nA2  - Editor, Series\nA4  - Translator\nAB  - Abstract\nAD  - Editor Address\nAN  - Accession Number\nAU  - Editor\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 19\nER  - \n\n\nTY  - EJOUR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Year Cited\nC2  - Date Cited\nC3  - PMCID\nC4  - Reviewer\nC5  - Issue Title\nC6  - NIHMSID\nC7  - Article Number\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Issue\nM3  - Type of Work\nN1  - Notes\nNV  - Document Number\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - E-Pub Date\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Periodical Title\nT3  - Website Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 20\nER  - \n\n\nTY  - EBOOK\nA2  - Editor\nA3  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Year Cited\nC2  - Date Cited\nC3  - Title Prefix\nC4  - Reviewer\nC5  - Last Update Date\nC6  - NIHMSID\nC7  - PMCID\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Type of Medium\nN1  - Notes\nNV  - Version\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Number of Pages\nT2  - Secondary Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 21\nER  - \n\n\nTY  - ECHAP\nA2  - Editor\nA3  - Editor, Series\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Section\nC3  - Title Prefix\nC4  - Reviewer\nC5  - Packaging Method\nC6  - NIHMSID\nC7  - PMCID\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISSN/ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Book Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 22\nER  - \n\n\nTY  - ENCYC\nA2  - Editor\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Term\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Encyclopedia Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 18\nER  - \n\n\nTY  - EQUA\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - By, Created\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 24\nER  - \n\n\nTY  - FIGURE\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - By, Created\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 25\nER  - \n\n\nTY  - MPCT\nA2  - Director, Series\nA3  - Producer\nA4  - Performers\nAB  - Synopsis\nAD  - Author Address\nAN  - Accession Number\nAU  - Director\nC1  - Cast\nC2  - Credits\nC4  - Genre\nC5  - Format\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date Released\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Medium\nN1  - Notes\nPB  - Distributor\nPY  - Year Released\nRN  - Research Notes\nRP  - Reprint Edition\nSP  - Running Time\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 26\nER  - \n\n\nTY  - GEN\nA2  - Author, Secondary\nA3  - Author, Tertiary\nA4  - Author, Subsidiary\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Custom 1\nC2  - Custom 2\nC3  - Custom 3\nC4  - Custom 4\nC5  - Custom 5\nC6  - Custom 6\nC7  - Custom 7\nC8  - Custom 8\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISSN/ISBN\nSP  - Pages\nST  - Short Title\nT2  - Secondary Title\nT3  - Tertiary Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 27\nER  - \n\n\nTY  - GOVDOC\nA2  - Department\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Government Body\nC2  - Congress Number\nC3  - Congress Session\nCA  - Caption\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section\nSN  - ISSN/ISBN\nSP  - Pages\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 28\nER  - \n\n\nTY  - GRANT\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Investigators\nC1  - Contact Name\nC2  - Contact Address\nC3  - Contact Phone\nC4  - Contact Fax\nC5  - Funding Number\nC6  - CFDA Number\nCA  - Caption\nCN  - Call Number\nCY  - Activity Location\nDA  - Deadline\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Requirements\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Status\nM3  - Funding Type\nN1  - Notes\nNV  - Amount Received\nOP  - Original Grant Number\nPB  - Sponsoring Agency\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Review Date\nSE  - Duration of Grant\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nTI  - Title of Grant\nTT  - Translated Title\nUR  - URL\nVL  - Amount Requested\nY2  - Access Date\nID  - 29\nER  - \n\n\nTY  - HEAR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nC2  - Congress Number\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Document Number\nN1  - Notes\nNV  - Number of Volumes\nOP  - History\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Committee\nT3  - Legislative Body\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 30\nER  - \n\n\nTY  - JOUR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Legal Note\nC2  - PMCID\nC6  - NIHMSID\nC7  - Article Number\nCA  - Caption\nCN  - Call Number\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Epub Date\nJ2  - Periodical Title\nLA  - Language\nLB  - Label\nIS  - Issue\nM3  - Type of Article\nOP  - Original Publication\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Journal\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 31\nER  - \n\n\nTY  - LEGAL\nA2  - Organization, Issuing\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date of Code Edition\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Work\nN1  - Notes\nNV  - Session Number\nOP  - History\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section Number\nSN  - ISSN/ISBN\nSP  - Pages\nT2  - Title Number\nT3  - Supplement No.\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Rule Number\nY2  - Access Date\nID  - 32\nER  - \n\n\nTY  - MGZN\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Issue Number\nM3  - Type of Article\nN1  - Notes\nNV  - Frequency\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Magazine\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 33\nER  - \n\n\nTY  - MANSCPT\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Description of Material\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Folio Number\nM3  - Type of Work\nN1  - Notes\nNV  - Manuscript Number\nPB  - Library/Archive\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSP  - Pages\nST  - Short Title\nT2  - Collection Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume/Storage Container\nY2  - Access Date\nID  - 34\nER  - \n\n\nTY  - MAP\nA2  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Cartographer\nC1  - Scale\nC2  - Area\nC3  - Size\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Type\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISSN/ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 35\nER  - \n\n\nTY  - MUSIC\nA2  - Editor\nA3  - Editor, Series\nA4  - Producer\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Composer\nC1  - Format of Music\nC2  - Form of Composition\nC3  - Music Parts\nC4  - Target Audience\nC5  - Accompanying Matter\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Form of Item\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Album Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 36\nER  - \n\n\nTY  - NEWS\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Reporter\nC1  - Column\nC2  - Issue\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Issue Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  -  Edition\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Article\nN1  - Notes\nNV  - Frequency\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Newspaper\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 37\nER  - \n\n\nTY  - DBASE\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Date Published\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM3  - Type of Work\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - Report Number\nSP  - Pages\nT2  - Periodical\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 38\nER  - \n\n\nTY  - MULTI\nA2  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - By, Created\nC1  - Year Cited\nC2  - Date Cited\nC5  - Format/Length\nCA  - Caption\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number of Screens\nM3  - Type of Work\nN1  - Notes\nPB  - Distributor\nPY  - Year\nRN  - Research Notes\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nID  - 39\nER  - \n\n\nTY  - PAMP\nA2  - Institution\nA4  - Translator\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nM2  - Number of Pages\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Published Source\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Number\nY2  - Access Date\nID  - 40\nER  - \n\n\nTY  - PAT\nA2  - Organization, Issuing\nA3  - International Author\nAB  - Abstract\nAD  - Inventor Address\nAN  - Accession Number\nAU  - Inventor\nC2  - Issue Date\nC3  - Designated States\nC4  - Attorney/Agent\nC5  - References\nC6  - Legal Status\nCA  - Caption\nCN  - Call Number\nCY  - Country\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - International Patent Classification\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Application Number\nM3  - Patent Type\nN1  - Notes\nNV  - US Patent Classification\nOP  - Priority Numbers\nPB  - Assignee\nPY  - Year\nRN  - Research Notes\nSE  - International Patent Number\nSN  - Patent Number\nSP  - Pages\nST  - Short Title\nT2  - Published Source\nT3  - Title, International\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Patent Version Number\nY2  - Access Date\nID  - 41\nER  - \n\n\nTY  - PCOMM\nA2  - Recipient\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Senders E-Mail\nC2  - Recipients E-Mail\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Description\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Folio Number\nM3  - Type\nN1  - Notes\nNV  - Communication Number\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 42\nER  - \n\n\nTY  - RPRT\nA2  - Editor, Series\nA3  - Publisher\nA4  - Department/Division\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC6  - Issue\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Document Number\nM3  - Type\nN1  - Notes\nNV  - Series Volume\nOP  - Contents\nPB  - Institution\nPY  - Year\nRN  - Research Notes\nRP  - Notes\nSN  - Report Number\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nT2  - Series Title\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 43\nER  - \n\n\nTY  - SER\nA2  - Editor\nA3  - Editor, Series\nA4  - Editor, Volume\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Section\nC2  - Report Number\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Chapter\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Secondary Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 44\nER  - \n\n\nTY  - STAND\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Institution\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Work\nN1  - Notes\nNV  - Session Number\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section Number\nSN  - Document Number\nSP  - Pages\nT2  - Section Title\nT3  - Paper Number\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Rule Number\nY2  - Access Date\nID  - 45\nER  - \n\n\nTY  - STAT\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nC5  - Publisher\nC6  - Volume\nCA  - Caption\nCN  - Call Number\nCY  - Country\nDA  - Date Enacted\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Public Law Number\nN1  - Notes\nNV  - Statute Number\nOP  - History\nPB  - Source\nPY  - Year\nRI  - Article Number\nRN  - Research Notes\nSE  - Sections\nSP  - Pages\nST  - Short Title\nT2  - Code\nT3  - International Source\nTA  - Author, Translated\nTI  - Name of Act\nTT  - Translated Title\nUR  - URL\nVL  - Code Number\nY2  - Access Date\nID  - 46\nER  - \n\n\nTY  - THES\nA3  - Advisor\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Document Number\nM3  - Thesis Type\nN1  - Notes\nPB  - University\nPY  - Year\nRN  - Research Notes\nSP  - Number of Pages\nST  - Short Title\nT2  - Academic Department\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Degree\nY2  - Access Date\nID  - 47\nER  - \n\n\nTY  - UNPB\nA2  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAU  - Name1, Author\nAU  - Name2, Author\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nPB  - Institution\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nST  - Short Title\nT2  - Series Title\nT3  - Department\nTA  - Author, Translated\nTI  - Title of Work\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 48\nER  - \n\n\nTY  - WEB\nA2  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Name1, Author\nAU  - Name2, Author\nC1  - Year Cited\nC2  - Date Cited\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Last Update Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Periodical Title\nKW  - Keyword1, Keyword2, Keyword3\nKeyword4; Keyword5\nLA  - Language\nLB  - Label\nM1  - Access Date\nM3  - Type of Medium\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Title\nTT  - Translated Title\nUR  - URL\nVL  - Access Year\nID  - 49\nER  - \n\n\n",
-		"items": [
-			{
-				"itemType": "document",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: ResearchNotes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Date Published<br/>J2  - Periodical Title<br/>M3  - Type of Work<br/>SE  - Screens<br/>SN  - ISSN/ISBN<br/>SP  - Pages<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Publication Number",
-				"publisher": "Publisher",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"publicationTitle": "Periodical"
-			},
-			{
-				"itemType": "document",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: ResearchNotes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviated Publication<br/>M3  - Type of Work<br/>NV  - Number of Volumes<br/>RP  - Reprint Edition<br/>SN  - ISBN<br/>SP  - Pages<br/>T3  - Volume Title<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Text Number",
-				"publisher": "Publisher",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Publication Title"
-			},
-			{
-				"itemType": "artwork",
-				"creators": [
-					{
-						"lastName": "Artist",
-						"creatorType": "artist",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Title: Translated Title<br/>Translated Author: Author, Translated<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Periodical Title<br/>PB  - Publisher<br/>SP  - Description<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"artworkSize": "Size/Length",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Size",
-				"artworkMedium": "Type of Work",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "film",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "producer"
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "director"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "director"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Performers<br/>C1  - Cast<br/>C2  - Credits<br/>C3  - Size/Length<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Periodical Title<br/>M3  - Type<br/>NV  - Extent of Work<br/>SN  - ISBN<br/>T3  - Series Title<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"videoRecordingFormat": "Format",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number",
-				"distributor": "Publisher",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "bill",
-				"creators": [
-					{
-						"lastName": "Sponsor",
-						"creatorType": "sponsor",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"date": "0000 Year Date",
-				"session": "Session",
-				"language": "Language",
-				"billNumber": "Bill Number",
-				"history": "History",
-				"section": "Code Section",
-				"codePages": "Code Pages",
-				"shortTitle": "Short Title",
-				"code": "Code",
-				"legislativeBody": "Legislative Body",
-				"title": "Title",
-				"url": "URL",
-				"codeVolume": "Code Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "blogPost",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Editor<br/>A3  - Illustrator<br/>AN  - Accession Number<br/>C1  - Author Affiliation<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Periodical Title<br/>PB  - Publisher<br/>SE  - Message Number<br/>SN  - ISBN<br/>SP  - Description<br/>T3  - Institution<br/>VL  - Access Year<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"date": "0000 Year Last",
-				"language": "Language",
-				"websiteType": "Type of Medium",
-				"shortTitle": "Short Title",
-				"blogTitle": "Title of WebLog",
-				"title": "Title of Entry",
-				"url": "URL",
-				"accessDate": "0000 Number"
-			},
-			{
-				"itemType": "book",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Pages<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"seriesNumber": "Series Volume",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"numPages": "Number of Pages",
-				"shortTitle": "Short Title",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "bookSection",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Abbreviation<br/>RP  - Reprint Edition<br/>SE  - Chapter<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"seriesNumber": "Series Volume",
-				"bookTitle": "Book Title",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access",
-				"date": "0000 Year"
-			},
-			{
-				"itemType": "case",
-				"creators": [
-					{
-						"lastName": "Counsel",
-						"creatorType": "counsel",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: ResearchNotes<br/>File Date: Filed Date<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Court, Higher<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Action of Higher Court<br/>J2  - Parallel Citation<br/>M3  - Citation of Reversal<br/>NV  - Reporter Abbreviation<br/>T3  - Decision<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"reporter": "Reporter",
-				"abstractNote": "Abstract",
-				"dateDecided": "0000 Year Date",
-				"language": "Language",
-				"history": "History",
-				"court": "Court",
-				"firstPage": "First Page",
-				"shortTitle": "Abbreviated Case Name",
-				"docketNumber": "Docket Number",
-				"caseName": "Case Name",
-				"url": "URL",
-				"reporterVolume": "Reporter Volume",
-				"title": "Abbreviated Case Name"
-			},
-			{
-				"itemType": "magazineArticle",
-				"creators": [
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Institution<br/>C5  - Packaging Method<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>NV  - Catalog Number<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Number of Pages<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Series Volume",
-				"ISSN": "ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "artwork",
-				"creators": [
-					{
-						"lastName": "By",
-						"firstName": "Created",
-						"creatorType": "artist"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - File, Name of<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>PB  - Publisher<br/>SP  - Description<br/>VL  - Image Size<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number",
-				"artworkMedium": "Type of Image",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Image Source Program"
-			},
-			{
-				"itemType": "book",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Attribution",
-						"creatorType": "author",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>J2  - Periodical Title<br/>M3  - Type<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"seriesNumber": "Series Volume",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISSN/ISBN",
-				"numPages": "Number of Pages",
-				"shortTitle": "Short Title",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access",
-				"date": "0000 Year"
-			},
-			{
-				"itemType": "computerProgram",
-				"creators": [
-					{
-						"lastName": "Programmer",
-						"creatorType": "programmer",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Editor, Series<br/>C1  - Computer<br/>DO  - DOI<br/>J2  - Periodical Title<br/>M3  - Type<br/>SP  - Description<br/>VL  - Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"version": "Version",
-				"programmingLanguage": "Language",
-				"company": "Publisher",
-				"ISBN": "ISBN",
-				"shortTitle": "Short Title",
-				"seriesTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"date": "0000 Year"
-			},
-			{
-				"itemType": "conferencePaper",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Conference Location<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Issue",
-				"publisher": "Publisher",
-				"pages": "Pages",
-				"conferenceName": "Conference Name",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "conferencePaper",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Sponsor",
-						"creatorType": "contributor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Source<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C2  - Year Published<br/>C5  - Packaging Method<br/>CY  - Conference Location<br/>ET  - Edition<br/>NV  - Number of Volumes<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"place": "Place Published",
-				"proceedingsTitle": "Proceedings Title",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Issue",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"conferenceName": "Conference Name",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "document",
-				"creators": [
-					{
-						"lastName": "Producer",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Agency",
-						"firstName": "Funding",
-						"creatorType": "translator"
-					},
-					{
-						"lastName": "Investigators",
-						"creatorType": "author",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Version History<br/>Reviewed Item: Geographic Coverage<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Time Period<br/>C2  - Unit of Observation<br/>C3  - Data Type<br/>C4  - Dataset(s)<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>J2  - Abbreviation<br/>NV  - Study Number<br/>SE  - Original Release Date<br/>SN  - ISSN<br/>T3  - Series Title<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"publisher": "Distributor",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "dictionaryEntry",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Term<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Version<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"extra": "Number",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"dictionaryTitle": "Dictionary Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access",
-				"date": "0000 Year"
-			},
-			{
-				"itemType": "book",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Editor Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>J2  - Periodical Title<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"seriesNumber": "Series Volume",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"numPages": "Number of Pages",
-				"shortTitle": "Short Title",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "journalArticle",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>C3  - PMCID<br/>C4  - Reviewer<br/>C5  - Issue Title<br/>C6  - NIHMSID<br/>C7  - Article Number<br/>CY  - Place Published<br/>ET  - Edition<br/>NV  - Document Number<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - E-Pub Date<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"journalAbbreviation": "Periodical Title",
-				"language": "Language",
-				"issue": "Issue",
-				"ISSN": "ISSN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Periodical Title",
-				"series": "Website Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume"
-			},
-			{
-				"itemType": "book",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "seriesEditor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "editor"
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>series: Series Title<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>C5  - Last Update Date<br/>C6  - NIHMSID<br/>C7  - PMCID<br/>DO  - DOI<br/>M3  - Type of Medium<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"numberOfVolumes": "Version",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"numPages": "Number of Pages",
-				"series": "Secondary Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume"
-			},
-			{
-				"itemType": "bookSection",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>numberOfVolumes: Number of Volumes<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>C5  - Packaging Method<br/>C6  - NIHMSID<br/>C7  - PMCID<br/>DO  - DOI<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"numberOfVolumes": "Series Volume",
-				"publisher": "Publisher",
-				"ISBN": "ISSN/ISBN",
-				"pages": "Number of Pages",
-				"shortTitle": "Short Title",
-				"bookTitle": "Book Title",
-				"series": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "encyclopediaArticle",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "editor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Term<br/>DO  - DOI<br/>J2  - Abbreviation<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"encyclopediaTitle": "Encyclopedia Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "document",
-				"creators": [
-					{
-						"lastName": "File",
-						"firstName": "Name of",
-						"creatorType": "editor"
-					},
-					{
-						"lastName": "By",
-						"firstName": "Created",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>M3  - Type of Image<br/>SP  - Description<br/>VL  - Image Size<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number",
-				"publisher": "Publisher",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Image Source Program"
-			},
-			{
-				"itemType": "artwork",
-				"creators": [
-					{
-						"lastName": "By",
-						"firstName": "Created",
-						"creatorType": "artist"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - File, Name of<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>PB  - Publisher<br/>SP  - Description<br/>VL  - Image Size<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number",
-				"artworkMedium": "Type of Image",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Image Source Program"
-			},
-			{
-				"itemType": "film",
-				"creators": [
-					{
-						"lastName": "Producer",
-						"creatorType": "producer",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Performers",
-						"creatorType": "contributor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Director",
-						"creatorType": "director",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Director, Series<br/>C1  - Cast<br/>C2  - Credits<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Periodical Title<br/>M3  - Medium<br/>RP  - Reprint Edition<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Synopsis",
-				"archiveLocation": "Accession Number",
-				"genre": "Genre",
-				"videoRecordingFormat": "Format",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"distributor": "Distributor",
-				"runningTime": "Running Time",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Series Title"
-			},
-			{
-				"itemType": "journalArticle",
-				"creators": [
-					{
-						"lastName": "Author",
-						"firstName": "Secondary",
-						"creatorType": "editor"
-					},
-					{
-						"lastName": "Author",
-						"firstName": "Subsidiary",
-						"creatorType": "translator"
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Author, Tertiary<br/>C1  - Custom 1<br/>C2  - Custom 2<br/>C3  - Custom 3<br/>C4  - Custom 4<br/>C5  - Custom 5<br/>C6  - Custom 6<br/>C7  - Custom 7<br/>C8  - Custom 8<br/>CY  - Place Published<br/>ET  - Edition<br/>NV  - Number of Volumes<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Section<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"journalAbbreviation": "Periodical Title",
-				"language": "Language",
-				"issue": "Number",
-				"ISSN": "ISSN/ISBN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Secondary Title",
-				"series": "Tertiary Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "report",
-				"creators": [
-					{
-						"lastName": "Department",
-						"creatorType": "seriesEditor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Government Body<br/>C2  - Congress Number<br/>C3  - Congress Session<br/>DO  - DOI<br/>ET  - Edition<br/>SE  - Section<br/>T3  - Series Title<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"place": "Place Published",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number",
-				"institution": "Publisher",
-				"reportNumber": "ISSN/ISBN",
-				"pages": "Pages",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"date": "0000 Year"
-			},
-			{
-				"itemType": "journalArticle",
-				"creators": [
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Investigators",
-						"creatorType": "author",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Funding Type<br/>Original Publication: Original Grant Number<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Contact Name<br/>C2  - Contact Address<br/>C3  - Contact Phone<br/>C4  - Contact Fax<br/>C5  - Funding Number<br/>C6  - CFDA Number<br/>CY  - Activity Location<br/>ET  - Requirements<br/>NV  - Amount Received<br/>PB  - Sponsoring Agency<br/>RP  - Review Date<br/>SE  - Duration of Grant<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Deadline",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"journalAbbreviation": "Periodical Title",
-				"language": "Language",
-				"issue": "Status",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"title": "Title of Grant",
-				"url": "URL",
-				"volume": "Amount Requested",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Periodical Title"
-			},
-			{
-				"itemType": "hearing",
-				"creators": [],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>C2  - Congress Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>SN  - ISBN<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"session": "Session",
-				"language": "Language",
-				"documentNumber": "Document Number",
-				"numberOfVolumes": "Number of Volumes",
-				"history": "History",
-				"publisher": "Publisher",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"committee": "Committee",
-				"legislativeBody": "Legislative Body",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "journalArticle",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Article<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Legal Note<br/>C2  - PMCID<br/>C6  - NIHMSID<br/>C7  - Article Number<br/>ET  - Epub Date<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"journalAbbreviation": "Periodical Title",
-				"language": "Language",
-				"issue": "Issue",
-				"ISSN": "ISSN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Journal",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "case",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>File Date: Section Number<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Periodical Title<br/>M3  - Type of Work<br/>NV  - Session Number<br/>SN  - ISSN/ISBN<br/>T3  - Supplement No.<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"reporter": "Organization, Issuing",
-				"abstractNote": "Abstract",
-				"dateDecided": "0000 Year Date",
-				"language": "Language",
-				"extra": "Start Page",
-				"history": "History",
-				"court": "Publisher",
-				"firstPage": "Pages",
-				"caseName": "Title",
-				"url": "URL",
-				"reporterVolume": "Rule Number",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Title Number"
-			},
-			{
-				"itemType": "magazineArticle",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Periodical Title<br/>M3  - Type of Article<br/>NV  - Frequency<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Issue Number",
-				"ISSN": "ISSN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Magazine",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "manuscript",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>ET  - Description of Material<br/>J2  - Periodical Title<br/>NV  - Manuscript Number<br/>PB  - Library/Archive<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>VL  - Volume/Storage Container<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Folio Number",
-				"manuscriptType": "Type of Work",
-				"numPages": "Pages",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Collection Title"
-			},
-			{
-				"itemType": "map",
-				"creators": [
-					{
-						"lastName": "Cartographer",
-						"creatorType": "cartographer",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Editor, Series<br/>C2  - Area<br/>C3  - Size<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Periodical Title<br/>RP  - Reprint Edition<br/>SP  - Description<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"scale": "Scale",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"mapType": "Type",
-				"publisher": "Publisher",
-				"ISBN": "ISSN/ISBN",
-				"shortTitle": "Short Title",
-				"seriesTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "audioRecording",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "performer",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Producer",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Composer",
-						"creatorType": "composer",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Target Audience",
-						"creatorType": "wordsBy",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Editor, Series<br/>C1  - Format of Music<br/>C2  - Form of Composition<br/>C3  - Music Parts<br/>DO  - DOI<br/>ET  - Edition<br/>M3  - Form of Item<br/>RP  - Reprint Edition<br/>SE  - Section<br/>SP  - Pages<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"audioRecordingFormat": "Accompanying Matter",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"numberOfVolumes": "Number of Volumes",
-				"label": "Publisher",
-				"ISBN": "ISBN",
-				"shortTitle": "Short Title",
-				"seriesTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Album Title"
-			},
-			{
-				"itemType": "newspaperArticle",
-				"creators": [
-					{
-						"lastName": "Reporter",
-						"creatorType": "author",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Column<br/>C2  - Issue<br/>DO  - DOI<br/>M3  - Type of Article<br/>NV  - Frequency<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Issue",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"extra": "Start Page",
-				"section": "Section",
-				"ISSN": "ISSN",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Newspaper",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "document",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Date Published<br/>M3  - Type of Work<br/>SN  - Report Number<br/>SP  - Pages<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"publisher": "Publisher",
-				"title": "Title",
-				"url": "URL",
-				"publicationTitle": "Periodical"
-			},
-			{
-				"itemType": "videoRecording",
-				"creators": [
-					{
-						"lastName": "By",
-						"firstName": "Created",
-						"creatorType": "director"
-					},
-					{
-						"lastName": "Year Cited",
-						"creatorType": "castMember",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Editor, Series<br/>C2  - Date Cited<br/>DO  - DOI<br/>M3  - Type of Work<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"videoRecordingFormat": "Format/Length",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Number of Screens",
-				"studio": "Distributor",
-				"title": "Title",
-				"url": "URL",
-				"publicationTitle": "Series Title"
-			},
-			{
-				"itemType": "manuscript",
-				"creators": [
-					{
-						"lastName": "Translator",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Institution<br/>C5  - Packaging Method<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviation<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SN  - ISBN<br/>VL  - Number<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Series Volume\nNumber of Pages",
-				"manuscriptType": "Type of Work",
-				"numPages": "Pages",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Published Source"
-			},
-			{
-				"itemType": "patent",
-				"creators": [
-					{
-						"lastName": "Inventor",
-						"creatorType": "inventor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Attorney/Agent",
-						"creatorType": "attorneyAgent",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Inventor Address: Inventor Address<br/>Caption: Caption<br/>issueDate: 0000 Date<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>Patent Version Number: Patent Version Number<br/>A3  - International Author<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - International Patent Classification<br/>M3  - Patent Type<br/>NV  - US Patent Classification<br/>SE  - International Patent Number<br/>T3  - Title, International<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issuingAuthority": "Organization, Issuing",
-				"abstractNote": "Abstract",
-				"issueDate": "0000 Year Issue",
-				"country": "Designated States",
-				"references": "References",
-				"legalStatus": "Legal Status",
-				"place": "Country",
-				"language": "Language",
-				"applicationNumber": "Application Number",
-				"priorityNumbers": "Priority Numbers",
-				"assignee": "Assignee",
-				"patentNumber": "Patent Number",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Published Source"
-			},
-			{
-				"itemType": "letter",
-				"creators": [
-					{
-						"lastName": "Recipient",
-						"creatorType": "recipient",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Senders E-Mail<br/>C2  - Recipients E-Mail<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Description<br/>J2  - Abbreviation<br/>NV  - Communication Number<br/>PB  - Publisher<br/>SP  - Pages<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Folio Number",
-				"letterType": "Type",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "report",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "seriesEditor"
-					},
-					{
-						"lastName": "Department/Division",
-						"creatorType": "translator",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Publisher<br/>C6  - Issue<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Periodical Title<br/>NV  - Series Volume<br/>RP  - Notes<br/>VL  - Volume<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Document Number",
-				"reportType": "Type",
-				"institution": "Institution",
-				"reportNumber": "Report Number",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"seriesTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "book",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"creatorType": "seriesEditor",
-						"fieldMode": 1
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "editor"
-					},
-					{
-						"lastName": "Editor",
-						"firstName": "Volume",
-						"creatorType": "translator"
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>series: Series Title<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C2  - Report Number<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Chapter<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"edition": "Edition",
-				"language": "Language",
-				"seriesNumber": "Series Volume",
-				"numberOfVolumes": "Number of Volumes",
-				"publisher": "Publisher",
-				"ISBN": "ISBN",
-				"numPages": "Pages",
-				"shortTitle": "Short Title",
-				"series": "Secondary Title",
-				"title": "Title",
-				"url": "URL",
-				"volume": "Volume",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "report",
-				"creators": [
-					{
-						"lastName": "Institution",
-						"creatorType": "author",
-						"fieldMode": 1
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>J2  - Abbreviation<br/>NV  - Session Number<br/>SE  - Section Number<br/>T3  - Paper Number<br/>VL  - Rule Number<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Start Page",
-				"reportType": "Type of Work",
-				"institution": "Publisher",
-				"reportNumber": "Document Number",
-				"pages": "Pages",
-				"seriesTitle": "Section Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "statute",
-				"creators": [],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Article Number: Article Number<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>C5  - Publisher<br/>C6  - Volume<br/>CN  - Call Number<br/>CY  - Country<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>J2  - Abbreviation<br/>NV  - Statute Number<br/>PB  - Source<br/>T3  - International Source<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"dateEnacted": "0000 Year Date",
-				"session": "Session",
-				"language": "Language",
-				"publicLawNumber": "Public Law Number",
-				"history": "History",
-				"section": "Sections",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"code": "Code",
-				"nameOfAct": "Name of Act",
-				"url": "URL",
-				"codeNumber": "Code Number",
-				"accessDate": "0000 Access",
-				"title": "Short Title"
-			},
-			{
-				"itemType": "thesis",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Advisor<br/>DO  - DOI<br/>VL  - Degree<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"archiveLocation": "Accession Number",
-				"callNumber": "Call Number",
-				"place": "Place Published",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"language": "Language",
-				"extra": "Document Number",
-				"thesisType": "Thesis Type",
-				"university": "University",
-				"numPages": "Number of Pages",
-				"shortTitle": "Short Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access",
-				"publicationTitle": "Academic Department"
-			},
-			{
-				"itemType": "journalArticle",
-				"creators": [
-					{
-						"lastName": "Editor",
-						"firstName": "Series",
-						"creatorType": "editor"
-					},
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>PB  - Institution<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"date": "0000 Year Date",
-				"archive": "Name of Database",
-				"libraryCatalog": "Database Provider",
-				"journalAbbreviation": "Abbreviation",
-				"language": "Language",
-				"issue": "Number",
-				"pages": "Pages",
-				"shortTitle": "Short Title",
-				"publicationTitle": "Series Title",
-				"series": "Department",
-				"title": "Title of Work",
-				"url": "URL",
-				"accessDate": "0000 Access"
-			},
-			{
-				"itemType": "webpage",
-				"creators": [
-					{
-						"lastName": "Name1",
-						"firstName": "Author",
-						"creatorType": "author"
-					},
-					{
-						"lastName": "Name2",
-						"firstName": "Author",
-						"creatorType": "author"
-					}
-				],
-				"notes": [
-					{
-						"note": "<p>Notes</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Editor, Series<br/>AN  - Accession Number<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Periodical Title<br/>PB  - Publisher<br/>SN  - ISBN<br/>SP  - Description<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [
-					"Keyword1, Keyword2, Keyword3",
-					"Keyword4",
-					"Keyword5"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"abstractNote": "Abstract",
-				"date": "0000 Year Last",
-				"language": "Language",
-				"websiteType": "Type of Medium",
-				"shortTitle": "Short Title",
-				"websiteTitle": "Series Title",
-				"title": "Title",
-				"url": "URL",
-				"accessDate": "0000 Access"
+				"seeAlso": []
 			}
 		]
 	},
@@ -4448,6 +1992,7 @@ var testCases = [
 		"items": [
 			{
 				"itemType": "journalArticle",
+				"title": "Rapid identification of thousands of copperhead snake (Agkistrodon contortrix) microsatellite loci from modest amounts of 454 shotgun genome sequence",
 				"creators": [
 					{
 						"lastName": "CASTOE",
@@ -4485,19 +2030,14 @@ var testCases = [
 						"creatorType": "author"
 					}
 				],
-				"notes": [
-					{
-						"note": "<p>10.1111/j.1755-0998.2009.02750.x</p>"
-					},
-					{
-						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Consortium for Comparative Genomics, Department of Biochemistry and Molecular Genetics, University of Colorado School of Medicine, Aurora, CO 80045, USA; Department of Biology, University of Central Florida, 4000 Central Florida Blvd., Orlando, FL 32816, USA; Department of Biology & Amphibian and Reptile Diversity Research Center, The University of Texas at Arlington, Arlington, TX 76019, USA<br/>",
-						"tags": [
-							"_RIS import"
-						]
-					}
-				],
-				"tags": [],
-				"seeAlso": [],
+				"date": "2009",
+				"ISSN": "1755-0998",
+				"abstractNote": "Optimal integration of next-generation sequencing into mainstream research requires re-evaluation of how problems can be reasonably overcome and what questions can be asked. .... The random sequencing-based approach to identify microsatellites was rapid, cost-effective and identified thousands of useful microsatellite loci in a previously unstudied species.",
+				"issue": "9999",
+				"publicationTitle": "Molecular Ecology Resources",
+				"shortTitle": "Rapid identification of thousands of copperhead snake (Agkistrodon contortrix) microsatellite loci from modest amounts of 454 shotgun genome sequence",
+				"url": "http://dx.doi.org/10.1111/j.1755-0998.2009.02750.x",
+				"volume": "9999",
 				"attachments": [
 					{
 						"title": "2009 Castoe Mol Eco Resources",
@@ -4520,15 +2060,19 @@ var testCases = [
 						"downloadable": true
 					}
 				],
-				"abstractNote": "Optimal integration of next-generation sequencing into mainstream research requires re-evaluation of how problems can be reasonably overcome and what questions can be asked. .... The random sequencing-based approach to identify microsatellites was rapid, cost-effective and identified thousands of useful microsatellite loci in a previously unstudied species.",
-				"issue": "9999",
-				"ISSN": "1755-0998",
-				"shortTitle": "Rapid identification of thousands of copperhead snake (Agkistrodon contortrix) microsatellite loci from modest amounts of 454 shotgun genome sequence",
-				"publicationTitle": "Molecular Ecology Resources",
-				"title": "Rapid identification of thousands of copperhead snake (Agkistrodon contortrix) microsatellite loci from modest amounts of 454 shotgun genome sequence",
-				"url": "http://dx.doi.org/10.1111/j.1755-0998.2009.02750.x",
-				"volume": "9999",
-				"date": "2009"
+				"tags": [],
+				"notes": [
+					{
+						"note": "<p>10.1111/j.1755-0998.2009.02750.x</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Consortium for Comparative Genomics, Department of Biochemistry and Molecular Genetics, University of Colorado School of Medicine, Aurora, CO 80045, USA; Department of Biology, University of Central Florida, 4000 Central Florida Blvd., Orlando, FL 32816, USA; Department of Biology & Amphibian and Reptile Diversity Research Center, The University of Texas at Arlington, Arlington, TX 76019, USA<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
 			}
 		]
 	},
@@ -4538,12 +2082,25 @@ var testCases = [
 		"items": [
 			{
 				"itemType": "bill",
+				"title": "Act Name",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"billNumber": "Bill/Res Number",
+				"code": "Code",
+				"history": "History",
+				"section": "Section(s)",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4556,29 +2113,29 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"code": "Code",
-				"billNumber": "Bill/Res Number",
-				"section": "Section(s)",
-				"history": "History",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"title": "Act Name",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "artwork",
+				"title": "Title/Subject",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "artist"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"artworkMedium": "Medium",
+				"artworkSize": "Size",
+				"callNumber": "Call Number",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4612,23 +2169,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"artworkMedium": "Medium",
-				"artworkSize": "Size",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Title/Subject",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "film",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -4640,6 +2185,17 @@ var testCases = [
 						"firstName": "Subsidiary",
 						"creatorType": "producer"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"distributor": "Publisher Name",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4697,22 +2253,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"distributor": "Publisher Name",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "bookSection",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -4729,6 +2274,24 @@ var testCases = [
 						"creatorType": "seriesEditor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"bookTitle": "Monographic Title",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"pages": "Page(s)",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume Identification",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4762,29 +2325,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"bookTitle": "Monographic Title",
-				"edition": "Edition",
-				"place": "Place of Publication",
-				"series": "Series Title",
-				"seriesNumber": "Series Volume Identification",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"publisher": "Publisher Name",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "bookSection",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -4806,6 +2351,25 @@ var testCases = [
 						"creatorType": "seriesEditor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"bookTitle": "Monographic Title",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"pages": "Page(s)",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume ID",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4848,36 +2412,30 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"bookTitle": "Monographic Title",
-				"edition": "Edition",
-				"place": "Place of Publication",
-				"series": "Series Title",
-				"seriesNumber": "Series Volume ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"publisher": "Publisher Name",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"pages": "Page(s)",
+				"publicationTitle": "Journal Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4890,30 +2448,30 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Title",
-				"publicationTitle": "Journal Title",
-				"date": "0000 Date",
-				"volume": "Volume ID",
-				"pages": "Page(s)"
+				"seeAlso": []
 			},
 			{
 				"itemType": "book",
+				"title": "Monographic Title",
 				"creators": [
 					{
 						"lastName": "Monographic Author",
 						"creatorType": "author",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4926,24 +2484,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Monographic Title",
-				"publisher": "Publisher Name",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "book",
+				"title": "Monographic Title",
 				"creators": [
 					{
 						"lastName": "Monographic Author",
@@ -4960,6 +2505,23 @@ var testCases = [
 						"creatorType": "editor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume ID",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -4993,34 +2555,28 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"edition": "Edition",
-				"place": "Place of Publication",
-				"series": "Series Title",
-				"seriesNumber": "Series Volume ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Monographic Title",
-				"publisher": "Publisher Name",
-				"volume": "Volume ID",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "case",
+				"caseName": "Case Name",
 				"creators": [
 					{
 						"lastName": "Counsel",
 						"creatorType": "author",
 						"fieldMode": 1
 					}
+				],
+				"dateDecided": "0000 Date",
+				"abstractNote": "Abstract",
+				"court": "Court",
+				"firstPage": "Page(s)",
+				"reporterVolume": "Reporter Number",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5036,28 +2592,31 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"caseName": "Case Name",
-				"court": "Court",
-				"reporterVolume": "Reporter Number",
-				"firstPage": "Page(s)",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"dateDecided": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "computerProgram",
+				"title": "Program Title",
 				"creators": [
 					{
 						"lastName": "Author/Programmer",
 						"creatorType": "programmer",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"company": "Publisher Name",
+				"place": "Place of Publication",
+				"url": "Location/URL",
+				"version": "Version",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5097,25 +2656,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"version": "Version",
-				"place": "Place of Publication",
-				"company": "Publisher Name",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Program Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "conferencePaper",
+				"title": "Paper/Section Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -5132,6 +2677,23 @@ var testCases = [
 						"creatorType": "seriesEditor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"pages": "Location in Work",
+				"place": "Place of Publication",
+				"proceedingsTitle": "Proceedings Title",
+				"publisher": "Publisher Name",
+				"series": "Series Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5171,34 +2733,28 @@ var testCases = [
 						"note": "<p>Notes</p>"
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"proceedingsTitle": "Proceedings Title",
-				"place": "Place of Publication",
-				"series": "Series Title",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Paper/Section Title",
-				"publisher": "Publisher Name",
-				"volume": "Volume ID",
-				"pages": "Location in Work",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "document",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Editor/Compiler",
 						"creatorType": "editor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"publisher": "Publisher Name",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5235,28 +2791,30 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"publisher": "Publisher Name",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "thesis",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"numPages": "Extent of Work",
+				"place": "Place of Publication",
+				"university": "University",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5281,30 +2839,25 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"university": "University",
-				"numPages": "Extent of Work",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "webpage",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Last",
+				"abstractNote": "Abstract",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5320,19 +2873,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"title": "Title",
-				"date": "0000 Last"
+				"seeAlso": []
 			},
 			{
 				"itemType": "email",
+				"subject": "Subject",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -5344,6 +2889,14 @@ var testCases = [
 						"creatorType": "recipient",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5365,19 +2918,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"subject": "Subject",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -5390,6 +2935,23 @@ var testCases = [
 						"fieldMode": 1
 					}
 				],
+				"date": "0000 Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"journalAbbreviation": "Journal Title",
+				"pages": "Location in Work",
+				"publicationTitle": "Monographic Title",
+				"series": "Series Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
+				],
 				"notes": [
 					{
 						"note": "<p>Notes</p>"
@@ -5401,34 +2963,27 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"journalAbbreviation": "Journal Title",
-				"issue": "Issue ID",
-				"series": "Series Title",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISSN": "ISSN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"publicationTitle": "Monographic Title",
-				"volume": "Volume ID",
-				"pages": "Location in Work",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "hearing",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Hearing",
+				"abstractNote": "Abstract",
+				"place": "Committee",
+				"publisher": "Subcommittee",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5453,27 +3008,30 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Committee",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"title": "Title",
-				"publisher": "Subcommittee",
-				"date": "0000 Hearing"
+				"seeAlso": []
 			},
 			{
 				"itemType": "magazineArticle",
+				"title": "Article Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"pages": "Page(s)",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5489,30 +3047,27 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Article Title",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "manuscript",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5528,27 +3083,33 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Article Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"language": "Language",
+				"pages": "Page(s)",
+				"publicationTitle": "Journal Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5573,27 +3134,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"language": "Language",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISSN": "ISSN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Article Title",
-				"publicationTitle": "Journal Title",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Article Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -5605,6 +3150,21 @@ var testCases = [
 						"firstName": "Monographic",
 						"creatorType": "editor"
 					}
+				],
+				"date": "0000 Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"pages": "Page(s)",
+				"publicationTitle": "Journal Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5635,32 +3195,32 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISSN": "ISSN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Article Title",
-				"publicationTitle": "Journal Title",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"pages": "Page(s)",
+				"publicationTitle": "Journal Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5673,27 +3233,26 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISSN": "ISSN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"publicationTitle": "Journal Title",
-				"volume": "Volume ID",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
 				"creators": [],
+				"date": "0000 Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Issue ID",
+				"pages": "Extent of Work",
+				"publicationTitle": "Journal Title",
+				"url": "Location/URL",
+				"volume": "Volume ID",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
+				],
 				"notes": [
 					{
 						"note": "<p>Editor: Editor</p>"
@@ -5723,22 +3282,7 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Issue ID",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISSN": "ISSN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"publicationTitle": "Journal Title",
-				"volume": "Volume ID",
-				"pages": "Extent of Work",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "letter",
@@ -5753,6 +3297,16 @@ var testCases = [
 						"creatorType": "recipient",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5780,26 +3334,29 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "book",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"numPages": "Location of Work",
+				"series": "Collection Title",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5833,29 +3390,31 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"series": "Collection Title",
-				"numPages": "Location of Work",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "map",
+				"title": "Map Title",
 				"creators": [
 					{
 						"lastName": "Cartographer",
 						"creatorType": "cartographer",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"extra": "Map Type\nArea",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"scale": "Scale",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5892,31 +3451,31 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"extra": "Map Type\nArea",
-				"place": "Place of Publication",
-				"scale": "Scale",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Map Title",
-				"publisher": "Publisher Name",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "book",
+				"title": "Monographic Title",
 				"creators": [
 					{
 						"lastName": "Monographic Author",
 						"creatorType": "author",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"place": "Place of Publication",
+				"publisher": "Publisher Name",
+				"url": "Location/URL",
+				"volume": "Edition",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -5932,25 +3491,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Monographic Title",
-				"volume": "Edition",
-				"publisher": "Publisher Name",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "audioRecording",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Composer",
@@ -5962,6 +3507,21 @@ var testCases = [
 						"creatorType": "performer",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"label": "Publisher Name",
+				"place": "Place of Publication",
+				"seriesTitle": "Series Title",
+				"url": "Location/URL",
+				"volume": "Edition",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6025,32 +3585,28 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"label": "Publisher Name",
-				"seriesTitle": "Series Title",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"volume": "Edition",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "film",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Director",
 						"creatorType": "director",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"extra": "Timing",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6084,28 +3640,30 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"extra": "Timing",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "newspaperArticle",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"extra": "Section",
+				"pages": "Page(s)",
+				"place": "Place of Publication",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6130,30 +3688,31 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"extra": "Section",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"pages": "Page(s)",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "patent",
+				"title": "Patent Title",
 				"creators": [
 					{
 						"lastName": "Inventor Name",
 						"creatorType": "inventor",
 						"fieldMode": 1
 					}
+				],
+				"issueDate": "0000 Date",
+				"abstractNote": "Abstract",
+				"applicationNumber": "Class Code, International",
+				"extra": "Class Code, National",
+				"issuingAuthority": "Assignee",
+				"language": "Language",
+				"pages": "Abstract Journal Page(s)",
+				"place": "Country",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6202,25 +3761,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issuingAuthority": "Assignee",
-				"place": "Country",
-				"language": "Language",
-				"url": "Location/URL",
-				"extra": "Class Code, National",
-				"applicationNumber": "Class Code, International",
-				"abstractNote": "Abstract",
-				"issueDate": "0000 Date",
-				"title": "Patent Title",
-				"pages": "Abstract Journal Page(s)"
+				"seeAlso": []
 			},
 			{
 				"itemType": "report",
+				"title": "Report Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -6232,6 +3777,19 @@ var testCases = [
 						"creatorType": "seriesEditor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"institution": "Publisher Name",
+				"pages": "Extent of Work",
+				"place": "Place of Publication",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6280,24 +3838,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"institution": "Publisher Name",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Report Title",
-				"pages": "Extent of Work",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "audioRecording",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Composer",
@@ -6309,6 +3854,20 @@ var testCases = [
 						"creatorType": "performer",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"label": "Publisher Name",
+				"place": "Place of Publication",
+				"seriesTitle": "Series Title",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6363,31 +3922,27 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"label": "Publisher Name",
-				"seriesTitle": "Series Title",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "statute",
+				"nameOfAct": "Statute Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"dateEnacted": "0000 Date",
+				"abstractNote": "Abstract",
+				"codeNumber": "Title/Code Number",
+				"pages": "Section(s)",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6400,27 +3955,29 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"nameOfAct": "Statute Title",
-				"codeNumber": "Title/Code Number",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"dateEnacted": "0000 Date",
-				"pages": "Section(s)"
+				"seeAlso": []
 			},
 			{
 				"itemType": "magazineArticle",
+				"title": "Catalog Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"issue": "Catalog Number",
+				"url": "Location/URL",
+				"volume": "Edition",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6445,29 +4002,28 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"issue": "Catalog Number",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Catalog Title",
-				"volume": "Edition",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "manuscript",
+				"title": "Act Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"place": "Code",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6480,22 +4036,11 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Code",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Act Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "journalArticle",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
@@ -6507,6 +4052,16 @@ var testCases = [
 						"creatorType": "editor",
 						"fieldMode": 1
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6522,27 +4077,31 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "videoRecording",
+				"title": "Analytic Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "director"
 					}
+				],
+				"date": "0000 Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archiveLocation": "Address/Availability",
+				"callNumber": "Call Number",
+				"extra": "Extent of Work",
+				"place": "Place of Publication",
+				"studio": "Distributor",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6579,31 +4138,25 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
-				"attachments": [],
-				"place": "Place of Publication",
-				"studio": "Distributor",
-				"extra": "Extent of Work",
-				"archiveLocation": "Address/Availability",
-				"url": "Location/URL",
-				"ISBN": "ISBN",
-				"abstractNote": "Abstract",
-				"callNumber": "Call Number",
-				"title": "Analytic Title",
-				"date": "0000 Date"
+				"seeAlso": []
 			},
 			{
 				"itemType": "webpage",
+				"title": "Title",
 				"creators": [
 					{
 						"lastName": "Author Name",
 						"firstName": "Author2 Name2",
 						"creatorType": "author"
 					}
+				],
+				"date": "0000 Date",
+				"abstractNote": "Abstract",
+				"url": "Location/URL",
+				"attachments": [],
+				"tags": [
+					"Keywords1, Keywords2, Keywords3",
+					"Keywords4"
 				],
 				"notes": [
 					{
@@ -6622,16 +4175,2537 @@ var testCases = [
 						]
 					}
 				],
-				"tags": [
-					"Keywords1, Keywords2, Keywords3",
-					"Keywords4"
-				],
-				"seeAlso": [],
+				"seeAlso": []
+			}
+		]
+	},
+	{
+		"type": "import",
+		"input": "TY  - JOUR\nDA  - 2000/12/13/\nST  - RIS date test\nTI  - RIS date test\nID  - 115\nER  - \n\n\nTY  - JOUR\nCA  - Figure Caption\nL1  - internal-pdf://1637965904/attached.pdf\nL4  - 2965161485figure.tiff\nST  - Attachment and figure test\nTI  - Attachment and figure test\nID  - 116\nER  - \n\n\nTY  - JOUR\nL1  - file://E:\\backup\\Aurimas\\Desktop\\linked.pdf\nST  - Linked attachment test\nTI  - Linked attachment test\nID  - 117\nER  - \n\n\nTY  - JOUR\nST  - Markup Test: bold bold-italic italic super sub underline times new roman 18pt symbol font\nTI  - Markup Test: bold bold-italic italic super sub underline times new roman 18pt symbol font\nID  - 119\nER  - \n\n\nTY  - JOUR\nAU  - Last, First\nAU  - Last2, First2\nAU  - Some Institution\nAU  - Another Institution, Inc.\nST  - Author name test\nTI  - Author name test\nID  - 118\nER  - \n\n\nTY  - JOUR\nAU  - Smith, John\nC2  - 123455\nC7  - 12\nDA  - 2000 Mar 15\nDO  - 10.1234/12345-x\nET  - 2000 Jan 12\nKW  - kw1; kw2 \\ kw3 / kw4\nkw5\nLA  - en-US\nM1  - 9\nM3  - Type of Article\nPY  - 1999\nSE  - 89\nSN  - 1234-0987\nSP  - 89-111\nST  - title\nT2  - Some journal\nTI  - Numeric and date field test\nUR  - http://www.google.com\nVL  - 1\nY2  - 11 September 2010\nID  - 114\nER  - \n\n\nTY  - BILL\nA2  - SpnsorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nCA  - Caption\nCN  - Call Number\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nN1  - Notes\nM1  - Bill Number\nOP  - HIstory\nPY  - Year\nRN  - Research Notes\nSE  - Code Section\nSP  - Code Pages\nST  - Short Title\nT2  - Code\nT3  - Legislative Body\nTA  - Author, Translated\nTI  - Bill: Title\nTT  - Translated Title\nUR  - URL\nVL  - Code Volume\nY2  - Access Date\nID  - 59\nER  - \n\n\nTY  - HEAR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nC2  - Congress Number\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Document Number\nN1  - Notes\nNV  - Number of Volumes\nOP  - History\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Committee\nT3  - Legislative Body\nTA  - Author, Translated\nTI  - Hearing: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 86\nER  - \n\n\nTY  - STAT\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nC5  - Publisher\nC6  - Volume\nCA  - Caption\nCN  - Call Number\nCY  - Country\nDA  - Date Enacted\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Session\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Public Law Number\nN1  - Notes\nNV  - Statue Number\nOP  - History\nPB  - Source\nPY  - Year\nRI  - Article Number\nRN  - Research Notes\nSE  - Sections\nSP  - Pages\nST  - Short Title\nT2  - Code\nT3  - International Source\nTA  - Author, Translated\nTI  - Statute: Name of Act\nTT  - Translated Title\nUR  - URL\nVL  - Code Number\nY2  - Access Date\nID  - 105\nER  - \n\n\nTY  - CASE\nA2  - Reporter\nA3  - Court, Higher\nA4  - Counsel\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nCA  - Caption\nCN  - Call Number\nDA  - Date Decided\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Action of Higher Court\nJ2  - Parallel Citation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Citation of Reversal\nN1  - Notes\nNV  - Reporter Abbreviation\nOP  - History\nPB  - Court\nPY  - Year Decided\nRN  - Research Notes\nSE  - Filed Date\nSP  - First Page\nST  - Abbreviated Case Name\nSV  - Docket Number\nT3  - Decision\nTA  - Author, Translated\nTI  - Case: Case Name\nTT  - Translated Title\nUR  - URL\nVL  - Reporter Volume\nY2  - Access Date\nID  - 66\nER  - \n\n\nTY  - ART\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - ArtistLast, First\nC3  - Size/Length\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDP  - Database Provider\nDO  - DOI\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Size\nM3  - Type of Work\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nST  - Short Title\nTI  - Artwork: Title\nTT  - Translated Title\nTA  - Author, Translated\nUR  - URL\nY2  - Access Date\nID  - 57\nER  - \n\n\nTY  - CLSWK\nA2  - Series EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AttributionLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISSN/ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Classical Work: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 69\nER  - \n\n\nTY  - AGGR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Date Published\nJ2  - Alternate Journal\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Publication Number\nM3  - Type of Work\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Screens\nSN  - ISSN/ISBN\nSP  - Pages\nST  - Short Title\nT2  - Periodical\nTA  - Author, Translated\nTI  - Aggregated Database: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 55\nER  - \n\n\nTY  - ANCIENT\nA2  - EditorFirst, Last\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviated Publication\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Text Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Publication Title\nT3  - Volume Title\nTA  - Author, Translated\nTI  - Ancient Text: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 56\nER  - \n\n\nTY  - ADVS\nA2  - PerformerLast, First\nA3  - Editor, Series\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - CasrLast, First\nC2  - Credits\nC3  - Size/Length\nC5  - Format\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type\nN1  - Notes\nNV  - Extent of Work\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nST  - Short Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Audiovisual Material: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 58\nER  - \n\n\nTY  - BLOG\nA2  - EditorLast, First\nA3  - IllustratorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Author Affiliation\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Last Update Date\nDate\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Journal\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Date\nM3  - Type of Medium\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Message Number\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Title of WebLog\nT3  - Institution\nTA  - Author, Translated\nTI  - Blog: Title of Entry\nTT  - Translated Title\nUR  - URL\nVL  - Access Year\nID  - 60\nER  - \n\n\nTY  - BOOK\nA2  - Series EditorLast, First\nA2  - EditorLast, First\nA3  - EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC3  - Title Prefix\nC4  - Reviewer\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Pages\nSN  - ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Book: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 61\nER  - \n\n\nTY  - CHAP\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Section\nC3  - Title Prefix\nC4  - ReviewerLast, First\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number of Volumes\nOP  - Original Publication\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Chapter\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nSV  - Series Volume\nT2  - Book Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Book Section: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 63\nER  - \n\n\nTY  - CTLG\nA2  - Institution\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Catalog Number\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Number of Pages\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Catalog: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 67\nER  - \n\n\nTY  - CPAPER\nA2  - EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Place Published\nCA  - Caption\nCN  - Call Number\nCY  - Conference Location\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue\nM3  - Type\nN1  - Notes\nNV  - Session\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nT2  - Conference Name\nTA  - Author, Translated\nTI  - Conference Paper: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 71\nER  - \n\n\nTY  - DICT\nA2  - EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Term\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Version\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Dictionary Title\nTA  - Author, Translated\nTI  - Dictionary: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 74\nER  - \n\n\nTY  - EJOUR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Year Cited\nC2  - Date Cited\nC3  - PMCID\nC4  - Reviewer\nC5  - Issue Title\nC6  - NIHMSID\nC7  - Article Number\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue\nM3  - Type of Work\nN1  - Notes\nNV  - Document Number\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - E-Pub Date\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Periodical Title\nT3  - Website Title\nTA  - Author, Translated\nTI  - Electronic Article: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 76\nER  - \n\n\nTY  - EBOOK\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Year Cited\nC2  - Date Cited\nC3  - Title Prefix\nC4  - Reviewer\nC5  - Last Update Date\nC6  - NIHMSID\nC7  - Pmcid\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Type of Medium\nN1  - Notes\nNV  - Version\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Number of Pages\nT2  - Secondary Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Electronic Book: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 77\nER  - \n\n\nTY  - ECHAP\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Section\nC3  - Title Prefix\nC4  - ReviewerLast, First\nC5  - Packaging Method\nC6  - NIHMSID\nC7  - Pmcid\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Chapter\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Book Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Electronic Book Section: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 78\nER  - \n\n\nTY  - ENCYC\nA2  - EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Term\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Encyclopedia Title\nTA  - Author, Translated\nTI  - Encyclopedia: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 79\nER  - \n\n\nTY  - GEN\nA2  - Secondary AuthorLast, First\nA3  - Tertiary AuthorLast, First\nA4  - Subsidiary AuthorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Custom 1\nC2  - Custom 2\nC3  - Custom 3\nC4  - Custom 4\nC5  - Custom 5\nC6  - Custom 6\nC7  - Custom 7\nC8  - Custom 8\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISBN/ISSN\nSP  - Pages\nST  - Short Title\nT2  - Secondary Title\nT3  - Tertiary Title\nTA  - Author, Translated\nTI  - Generic: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 83\nER  - \n\n\nTY  - GOVDOC\nA2  - Department\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Government Body\nC2  - Congress Number\nC3  - Congress Session\nCA  - Caption\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section\nSN  - Report Number\nSP  - Pages\nT3  - Series Title\nTA  - Author, Translated\nTI  - Government Document: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 84\nER  - \n\n\nTY  - LEGAL\nA2  - Organization, Issuing\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date of Code Edition\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Work\nN1  - Notes\nNV  - Session Number\nOP  - History\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section Number\nSN  - Document Number\nSP  - Pages\nT2  - Title Number\nT3  - Supplement No.\nTA  - Author, Translated\nTI  - Legal Rule or Regulation: Title\nTT  - Translated Title\nUR  - URL\nVL  - Rule Number\nY2  - Access Date\nID  - 89\nER  - \n\n\nTY  - MGZN\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Magazine\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue Number\nM3  - Type of Article\nN1  - Notes\nNV  - Frequency\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Magazine\nTA  - Author, Translated\nTI  - Magazine Article: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 90\nER  - \n\n\nTY  - MANSCPT\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nA2  - Institution\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Description of Material\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Folio Number\nM3  - Type of Work\nN1  - Notes\nNV  - Manuscript Number\nPB  - Library/Archive\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSP  - Pages\nST  - Short Title\nT2  - Collection Title\nTA  - Author, Translated\nTI  - Manuscript: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume/Storage Container\nY2  - Access Date\nID  - 91\nER  - \n\n\nTY  - DBASE\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCY  - Place Published\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Date Published\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Type of Work\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - Report Number\nSP  - Pages\nT2  - Periodical\nTA  - Author, Translated\nTI  - Online Database: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nID  - 95\nER  - \n\n\nTY  - PAMP\nA2  - Institution\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nM2  - Number of Pages\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Published Source\nTA  - Author, Translated\nTI  - Pamphlet: Title\nTT  - Translated Title\nUR  - URL\nVL  - Number\nY2  - Access Date\nID  - 97\nER  - \n\n\nTY  - PCOMM\nA2  - RecipientLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Senders E-Mail\nC2  - Recipients E-Mail\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Description\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Folio Number\nM3  - Type\nN1  - Notes\nNV  - Communication Number\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nTI  - Personal Communication: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 99\nER  - \n\n\nTY  - JOUR\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Legal Note\nC2  - PMCID\nC6  - NIHMSID\nC7  - Article Number\nCA  - Caption\nCN  - Call Number\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Epub Date\nJ2  - Alternate Journal\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue\nM3  - Type of Article\nN1  - Notes\nOP  - Original Publication\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Start Page\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Journal\nTA  - Author, Translated\nTI  - Journal Article: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 100\nER  - \n\n\nTY  - RPRT\nA2  - Series EditorLast, First\nA3  - Publisher\nA4  - Department/Division\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC6  - Issue\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Document Number\nM3  - Type\nN1  - Notes\nNV  - Series Volume\nOP  - Contents\nPB  - Institution\nPY  - Year\nRN  - Research Notes\nRP  - Notes\nSN  - Report Number\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nT2  - Series Title\nTI  - Report: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 102\nER  - \n\n\nTY  - SER\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nA4  - Volume EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Section\nC2  - Report Number\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Chapter\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Secondary Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Serial: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 103\nER  - \n\n\nTY  - THES\nA3  - AdvisorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Document Number\nM3  - Thesis Type\nN1  - Notes\nPB  - University\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Academic Department\nTA  - Author, Translated\nTI  - Thesis: Title\nTT  - Translated Title\nUR  - URL\nVL  - Degree\nY2  - Access Date\nID  - 106\nER  - \n\n\nTY  - UNPB\nA2  - Series EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAU  - AuthorLast, First\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Work\nN1  - Notes\nPB  - Institution\nPY  - Year\nRN  - Research Notes\nSP  - Pages\nST  - Short Title\nT2  - Series Title\nT3  - Department\nTA  - Author, Translated\nTI  - Unpublished Work: Title of Work\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 107\nER  - \n\n\nTY  - POD\nA2  - Narrator\nA3  - ProducerLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type\nN1  - Notes\nNV  - Version\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Running Time\nSN  - ISBN/ISSN\nSP  - Pages\nST  - Short Title\nT2  - Title of Show\nT3  - Series Title\nTA  - Author, Translated\nTI  - Podcast: Title of Podcast\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 111\nER  - \n\n\nTY  - PRESS\nA2  - EditorLast, First\nA3  - ProducerLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number of Pages\nM3  - Type of Work\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISBN/ISSN\nSP  - Pages\nST  - Short Title\nT2  - Secondary Title\nT3  - Location of Work\nTA  - Author, Translated\nTI  - Press Release: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 112\nER  - \n\n\nTY  - WEB\nA2  - Series EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Year Cited\nC2  - Date Cited\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Last Update Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Access Date\nM3  - Type of Medium\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Web Page: Title\nTT  - Translated Title\nUR  - URL\nVL  - Access Year\nID  - 113\nER  - \n\n\nTY  - CONF\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nA4  - SponsorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - AuthorLast, First\nC1  - Place Published\nC2  - Year Published\nC3  - Proceedings Title\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Conference Location\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Issue\nN1  - Notes\nNV  - Issue\nNumber of Volumes\nOP  - Source\nPB  - Publisher\nPY  - Year of Conference\nRN  - Research Notes\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Conference Name\nT3  - Series Title\nTA  - Author, Translated\nTI  - Conference Proceedings: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 72\nER  - \n\n\nTY  - MAP\nA2  - Series EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - CartographerLast, First\nC1  - Scale\nC2  - Area\nC3  - Size\nC5  - Packaging Method\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Type\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Map: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 92\nER  - \n\n\nTY  - MUSIC\nA2  - EditorLast, First\nA3  - Series EditorLast, First\nA4  - ProducerLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - ComposerLast, First\nC1  - Format of Music\nC2  - Form of Composition\nC3  - Music Parts\nC4  - Target Audience\nC5  - Accompanying Matter\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Form of Item\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISBN\nSP  - Pages\nST  - Short Title\nT2  - Album Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Music: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 93\nER  - \n\n\nTY  - CHART\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Created ByLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Chart or Table: Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 68\nER  - \n\n\nTY  - EQUA\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Created ByLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Equation: Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 80\nER  - \n\n\nTY  - FIGURE\nA2  - File, Name of\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Created ByLast, First\nCN  - Call Number\nCA  - Caption\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Type of Image\nN1  - Notes\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSP  - Description\nT2  - Image Source Program\nTA  - Author, Translated\nTI  - Figure: Title\nTT  - Translated Title\nUR  - URL\nVL  - Image Size\nY2  - Access Date\nID  - 81\nER  - \n\n\nTY  - MULTI\nA2  - Series DirectorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Created ByLast, First\nC1  - Year Cited\nC2  - Date Cited\nC5  - Format/Length\nCA  - Caption\nDA  - Date Accessed\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number of Screens\nM3  - Type of Work\nN1  - Notes\nPB  - Distributor\nPY  - Year\nRN  - Research Notes\nT2  - Series Title\nTA  - Author, Translated\nTI  - Online Multimedia: Title\nTT  - Translated Title\nUR  - URL\nID  - 96\nER  - \n\n\nTY  - MPCT\nA2  - Series DirectorLast, First\nA3  - ProducerLast, First\nA4  - PerformerLast, First\nAB  - Synopsis\nAD  - Author Address\nAN  - Accession Number\nAU  - DirectorLast, First\nC1  - Cast\nC2  - Credits\nC4  - Genre\nC5  - Format\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date Released\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Medium\nN1  - Notes\nPB  - Distributor\nPY  - Year Released\nRN  - Research Notes\nRP  - Reprint Edition\nSP  - Running Time\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Film or Broadcast: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 82\nER  - \n\n\nTY  - EDBOOK\nA2  - Series EditorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Editor Address\nAN  - Accession Number\nAU  - EditorLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nC7  - Custom 7\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Series Volume\nM3  - Type of Work\nN1  - Notes\nNV  - Number of Volumes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nRP  - Reprint Edition\nSN  - ISBN\nSP  - Number of Pages\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Edited Book: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 75\nER  - \n\n\nTY  - STAND\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - Institution\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Work\nN1  - Notes\nNV  - Session Number\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSE  - Section Number\nSN  - Document Number\nSP  - Pages\nT2  - Section Title\nT3  - Paper Number\nTA  - Author, Translated\nTI  - Standard: Title\nTT  - Translated Title\nUR  - URL\nVL  - Rule Number\nY2  - Access Date\nID  - 104\nER  - \n\n\nTY  - INTV\nA2  - InterviewerLast, First\nA3  - DirectorLast, First\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - IntervieweeLast, First\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Edition\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Number\nM3  - Format\nN1  - Notes\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISBN/ISSN\nSP  - Pages\nST  - Short Title\nT2  - Program\nT3  - Location of Work\nTA  - Author, Translated\nTI  - Interview: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 110\nER  - \n\n\nTY  - PAT\nA2  - Organization, Issuing\nA3  - International Author\nAB  - Abstract\nAD  - Inventor Address\nAN  - Accession Number\nAU  - InventorLast, First\nC2  - Issue Date\nC3  - Desiganted States\nC4  - Attorney/Agent\nC5  - References\nC6  - Legal Status\nCA  - Caption\nCN  - Call Number\nCY  - Country\nDA  - Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - International Patent Classification\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Application Number\nM3  - Patent Type\nN1  - Notes\nNV  - US Patent Classification\nOP  - Priority Numbers\nPB  - Assignee\nPY  - Year\nRN  - Research Notes\nSE  - International Patent Number\nSN  - Patent Number\nSP  - Pages\nST  - Short Title\nT2  - Published Source\nT3  - Title, International\nTA  - Author, Translated\nTI  - Patent: Title\nTT  - Translated Title\nUR  - URL\nVL  - Patent Version Number\nY2  - Access Date\nID  - 98\nER  - \n\n\nTY  - GRANT\nA4  - TranslatorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - InvestigatorLast, First\nC1  - Contact Name\nC2  - Contact Address\nC3  - Contact Phone\nC4  - Contact Fax\nC5  - Funding Number\nC6  - CFDA Number\nCA  - Caption\nCN  - Call Number\nCY  - Activity Location\nDA  - Deadline\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Requirements\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Status\nM3  - Funding Type\nN1  - Notes\nNV  - Amount Received\nOP  - Original Publication\nPB  - Sponsoring Agency\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Review Date\nSE  - Duration of Grant\nSP  - Pages\nST  - Short Title\nTA  - Author, Translated\nTI  - Grant: Title of Grant\nTT  - Translated Title\nUR  - URL\nVL  - Amount Requested\nY2  - Access Date\nID  - 85\nER  - \n\n\nTY  - DATA\nA2  - ProducerLast, First\nA4  - Agency, Funding\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - InvestigatorsLast, First\nC1  - Time Period\nC2  - Unit of Observation\nC3  - Data Type\nC4  - Dataset(s)\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Date of Collection\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nJ2  - Abbreviation\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nN1  - Notes\nNV  - Study Number\nOP  - Version History\nPB  - Distributor\nPY  - Year\nRI  - Geographic Coverage\nRN  - Research Notes\nSE  - Original Release Date\nSN  - ISSN\nST  - Short Title\nT3  - Series Title\nTA  - Author, Translated\nTI  - Dataset: Title\nTT  - Translated Title\nUR  - URL\nY2  - Access Date\nID  - 73\nER  - \n\n\nTY  - COMP\nA2  - Series EditorLast, First\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - ProgrammerLast, First\nC1  - Computer\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  - Version\nJ2  - Alternate Title\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM3  - Type of Work\nN1  - Notes\nOP  - Contents\nPB  - Publisher\nPY  - Year\nRN  - Research Notes\nSN  - ISBN\nSP  - Description\nST  - Short Title\nT2  - Series Title\nTA  - Author, Translated\nTI  - Computer Program: Title\nTT  - Translated Title\nUR  - URL\nVL  - Edition\nY2  - Access Date\nID  - 70\nER  - \n\n\nTY  - NEWS\nAB  - Abstract\nAD  - Author Address\nAN  - Accession Number\nAU  - ReporterLast, First\nC1  - Column\nC2  - Issue\nCA  - Caption\nCN  - Call Number\nCY  - Place Published\nDA  - Issue Date\nDB  - Name of Database\nDO  - DOI\nDP  - Database Provider\nET  -  Edition\nKW  - Keyword1, Keyword2\nLA  - Language\nLB  - Label\nM1  - Start Page\nM3  - Type of Article\nN1  - Notes\nNV  - Frequency\nOP  - Original Publication\nPB  - Publisher\nPY  - Year\nRI  - Reviewed Item\nRN  - Research Notes\nRP  - Reprint Edition\nSE  - Section\nSN  - ISSN\nSP  - Pages\nST  - Short Title\nT2  - Newspaper\nTA  - Author, Translated\nTI  - Newspaper Article: Title\nTT  - Translated Title\nUR  - URL\nVL  - Volume\nY2  - Access Date\nID  - 94\nER  - \n\n\n",
+		"items": [
+			{
+				"itemType": "journalArticle",
+				"title": "RIS date test",
+				"creators": [],
+				"date": "December 13, 2000",
+				"shortTitle": "RIS date test",
 				"attachments": [],
-				"url": "Location/URL",
+				"tags": [],
+				"notes": [],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Attachment and figure test",
+				"creators": [],
+				"shortTitle": "Attachment and figure test",
+				"attachments": [
+					{
+						"title": "attached",
+						"downloadable": true
+					},
+					{
+						"title": "2965161485figure",
+						"downloadable": true
+					}
+				],
+				"tags": [],
+				"notes": [
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Caption: Figure Caption<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Linked attachment test",
+				"creators": [],
+				"shortTitle": "Linked attachment test",
+				"attachments": [
+					{
+						"title": "linked",
+						"downloadable": true
+					}
+				],
+				"tags": [],
+				"notes": [],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Markup Test: bold bold-italic italic super sub underline times new roman 18pt symbol font",
+				"creators": [],
+				"shortTitle": "Markup Test: bold bold-italic italic super sub underline times new roman 18pt symbol font",
+				"attachments": [],
+				"tags": [],
+				"notes": [],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Author name test",
+				"creators": [
+					{
+						"lastName": "Last",
+						"firstName": "First",
+						"creatorType": "author"
+					},
+					{
+						"lastName": "Last2",
+						"firstName": "First2",
+						"creatorType": "author"
+					},
+					{
+						"lastName": "Some Institution",
+						"creatorType": "author",
+						"fieldMode": 1
+					},
+					{
+						"lastName": "Another Institution",
+						"firstName": "Inc.",
+						"creatorType": "author"
+					}
+				],
+				"shortTitle": "Author name test",
+				"attachments": [],
+				"tags": [],
+				"notes": [],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Numeric and date field test",
+				"creators": [
+					{
+						"lastName": "Smith",
+						"firstName": "John",
+						"creatorType": "author"
+					}
+				],
+				"date": "2000 Mar 15",
+				"DOI": "10.1234/12345-x",
+				"ISSN": "1234-0987",
+				"issue": "9",
+				"language": "en-US",
+				"pages": "89-111",
+				"publicationTitle": "Some journal",
+				"shortTitle": "title",
+				"url": "http://www.google.com",
+				"volume": "1",
+				"attachments": [],
+				"tags": [
+					"kw1",
+					"kw2 \\ kw3 / kw4",
+					"kw5"
+				],
+				"notes": [
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>DOI: Type of Article<br/>C2  - 123455<br/>C7  - 12<br/>ET  - 2000 Jan 12<br/>SE  - 89<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "bill",
+				"title": "Bill: Title",
+				"creators": [
+					{
+						"lastName": "SpnsorLast",
+						"firstName": "First",
+						"creatorType": "sponsor"
+					}
+				],
+				"date": "0000 Year Date",
 				"abstractNote": "Abstract",
-				"title": "Title",
-				"date": "0000 Date"
+				"billNumber": "Bill Number",
+				"code": "Code",
+				"codePages": "Code Pages",
+				"codeVolume": "Code Volume",
+				"history": "HIstory",
+				"language": "Language",
+				"legislativeBody": "Legislative Body",
+				"section": "Code Section",
+				"session": "Session",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "hearing",
+				"title": "Hearing: Title",
+				"creators": [],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"committee": "Committee",
+				"documentNumber": "Document Number",
+				"history": "History",
+				"language": "Language",
+				"legislativeBody": "Legislative Body",
+				"numberOfVolumes": "Number of Volumes",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"session": "Session",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>C2  - Congress Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>SN  - ISBN<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "statute",
+				"nameOfAct": "Short Title",
+				"creators": [],
+				"dateEnacted": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"code": "Code",
+				"codeNumber": "Code Number",
+				"history": "History",
+				"language": "Language",
+				"pages": "Pages",
+				"publicLawNumber": "Public Law Number",
+				"section": "Sections",
+				"session": "Session",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Article Number: Article Number<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>C5  - Publisher<br/>C6  - Volume<br/>CN  - Call Number<br/>CY  - Country<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>J2  - Abbreviation<br/>NV  - Statue Number<br/>PB  - Source<br/>T3  - International Source<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "case",
+				"caseName": "Abbreviated Case Name",
+				"creators": [
+					{
+						"lastName": "Counsel",
+						"creatorType": "counsel",
+						"fieldMode": 1
+					}
+				],
+				"dateDecided": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"court": "Court",
+				"docketNumber": "Docket Number",
+				"firstPage": "First Page",
+				"history": "History",
+				"language": "Language",
+				"reporter": "Reporter",
+				"reporterVolume": "Reporter Volume",
+				"shortTitle": "Abbreviated Case Name",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>File Date: Filed Date<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Court, Higher<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Action of Higher Court<br/>J2  - Parallel Citation<br/>M3  - Citation of Reversal<br/>NV  - Reporter Abbreviation<br/>T3  - Decision<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "artwork",
+				"title": "Artwork: Title",
+				"creators": [
+					{
+						"lastName": "ArtistLast",
+						"firstName": "First",
+						"creatorType": "artist"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"artworkMedium": "Type of Work",
+				"artworkSize": "Size/Length",
+				"callNumber": "Call Number",
+				"extra": "Size",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Title: Translated Title<br/>Translated Author: Author, Translated<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Alternate Title<br/>PB  - Publisher<br/>SP  - Description<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "book",
+				"title": "Classical Work: Title",
+				"creators": [
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AttributionLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year",
+				"ISBN": "ISSN/ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Number of Pages",
+				"numberOfVolumes": "Number of Volumes",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>J2  - Alternate Title<br/>M3  - Type<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "document",
+				"title": "Aggregated Database: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"extra": "Publication Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"publisher": "Publisher",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Date Published<br/>J2  - Alternate Journal<br/>M3  - Type of Work<br/>SE  - Screens<br/>SN  - ISSN/ISBN<br/>SP  - Pages<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "document",
+				"title": "Ancient Text: Title",
+				"creators": [
+					{
+						"lastName": "EditorFirst",
+						"firstName": "Last",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Text Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"publisher": "Publisher",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviated Publication<br/>M3  - Type of Work<br/>NV  - Number of Volumes<br/>RP  - Reprint Edition<br/>SN  - ISBN<br/>SP  - Pages<br/>T3  - Volume Title<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "film",
+				"title": "Audiovisual Material: Title",
+				"creators": [
+					{
+						"lastName": "Editor",
+						"firstName": "Series",
+						"creatorType": "producer"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "director"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"distributor": "Publisher",
+				"extra": "Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"videoRecordingFormat": "Format",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - PerformerLast, First<br/>C1  - CasrLast, First<br/>C2  - Credits<br/>C3  - Size/Length<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Alternate Title<br/>M3  - Type<br/>NV  - Extent of Work<br/>SN  - ISBN<br/>T3  - Series Title<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "blogPost",
+				"title": "Blog: Title of Entry",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Last",
+				"abstractNote": "Abstract",
+				"blogTitle": "Title of WebLog",
+				"extra": "Date",
+				"language": "Language",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"websiteType": "Type of Medium",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - EditorLast, First<br/>A3  - IllustratorLast, First<br/>AN  - Accession Number<br/>C1  - Author Affiliation<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Alternate Journal<br/>PB  - Publisher<br/>SE  - Message Number<br/>SN  - ISBN<br/>SP  - Description<br/>T3  - Institution<br/>VL  - Access Year<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "book",
+				"title": "Book: Title",
+				"creators": [
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Number of Pages",
+				"numberOfVolumes": "Number of Volumes",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Pages<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "bookSection",
+				"title": "Book Section: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"bookTitle": "Book Title",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numberOfVolumes": "Number of Volumes",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C3  - Title Prefix<br/>C4  - ReviewerLast, First<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Abbreviation<br/>RP  - Reprint Edition<br/>SE  - Chapter<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "magazineArticle",
+				"title": "Catalog: Title",
+				"creators": [
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Series Volume",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Institution<br/>C5  - Packaging Method<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>NV  - Catalog Number<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Number of Pages<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "conferencePaper",
+				"title": "Conference Paper: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"conferenceName": "Conference Name",
+				"extra": "Issue",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Conference Location<br/>NV  - Session<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "dictionaryEntry",
+				"title": "Dictionary: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"dictionaryTitle": "Dictionary Title",
+				"edition": "Edition",
+				"extra": "Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numberOfVolumes": "Number of Volumes",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Term<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Version<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Electronic Article: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"issue": "Issue",
+				"journalAbbreviation": "Alternate Title",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Periodical Title",
+				"series": "Website Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>C3  - PMCID<br/>C4  - Reviewer<br/>C5  - Issue Title<br/>C6  - NIHMSID<br/>C7  - Article Number<br/>CY  - Place Published<br/>ET  - Edition<br/>NV  - Document Number<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - E-Pub Date<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "book",
+				"title": "Electronic Book: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Number of Pages",
+				"numberOfVolumes": "Version",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Secondary Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>series: Series Title<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>C3  - Title Prefix<br/>C4  - Reviewer<br/>C5  - Last Update Date<br/>C6  - NIHMSID<br/>C7  - Pmcid<br/>DO  - DOI<br/>M3  - Type of Medium<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "bookSection",
+				"title": "Electronic Book Section: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"bookTitle": "Book Title",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numberOfVolumes": "Chapter",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>numberOfVolumes: Number of Volumes<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C3  - Title Prefix<br/>C4  - ReviewerLast, First<br/>C5  - Packaging Method<br/>C6  - NIHMSID<br/>C7  - Pmcid<br/>DO  - DOI<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "encyclopediaArticle",
+				"title": "Encyclopedia: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"encyclopediaTitle": "Encyclopedia Title",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numberOfVolumes": "Number of Volumes",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Term<br/>DO  - DOI<br/>J2  - Abbreviation<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Generic: Title",
+				"creators": [
+					{
+						"lastName": "Secondary AuthorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Subsidiary AuthorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISBN/ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Number",
+				"journalAbbreviation": "Alternate Title",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Secondary Title",
+				"series": "Tertiary Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Tertiary AuthorLast, First<br/>C1  - Custom 1<br/>C2  - Custom 2<br/>C3  - Custom 3<br/>C4  - Custom 4<br/>C5  - Custom 5<br/>C6  - Custom 6<br/>C7  - Custom 7<br/>C8  - Custom 8<br/>CY  - Place Published<br/>ET  - Edition<br/>NV  - Number of Volumes<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Section<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "report",
+				"title": "Government Document: Title",
+				"creators": [
+					{
+						"lastName": "Department",
+						"creatorType": "seriesEditor",
+						"fieldMode": 1
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"extra": "Issue",
+				"institution": "Publisher",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"reportNumber": "Report Number",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Government Body<br/>C2  - Congress Number<br/>C3  - Congress Session<br/>DO  - DOI<br/>ET  - Edition<br/>SE  - Section<br/>T3  - Series Title<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "case",
+				"caseName": "Legal Rule or Regulation: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"dateDecided": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"court": "Publisher",
+				"extra": "Start Page",
+				"firstPage": "Pages",
+				"history": "History",
+				"language": "Language",
+				"reporter": "Organization, Issuing",
+				"reporterVolume": "Rule Number",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>File Date: Section Number<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>AN  - Accession Number<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>NV  - Session Number<br/>SN  - Document Number<br/>T3  - Supplement No.<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "magazineArticle",
+				"title": "Magazine Article: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Issue Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Magazine",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Alternate Magazine<br/>M3  - Type of Article<br/>NV  - Frequency<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "manuscript",
+				"title": "Manuscript: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Folio Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"manuscriptType": "Type of Work",
+				"numPages": "Pages",
+				"place": "Place Published",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Institution<br/>DO  - DOI<br/>ET  - Description of Material<br/>J2  - Abbreviation<br/>NV  - Manuscript Number<br/>PB  - Library/Archive<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>VL  - Volume/Storage Container<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "document",
+				"title": "Online Database: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"publisher": "Publisher",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Date Published<br/>M3  - Type of Work<br/>SN  - Report Number<br/>SP  - Pages<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "manuscript",
+				"title": "Pamphlet: Title",
+				"creators": [
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Series Volume\nNumber of Pages",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"manuscriptType": "Type of Work",
+				"numPages": "Pages",
+				"place": "Place Published",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Institution<br/>C5  - Packaging Method<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Abbreviation<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SN  - ISBN<br/>VL  - Number<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "letter",
+				"title": "Personal Communication: Title",
+				"creators": [
+					{
+						"lastName": "RecipientLast",
+						"firstName": "First",
+						"creatorType": "recipient"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Folio Number",
+				"language": "Language",
+				"letterType": "Type",
+				"libraryCatalog": "Database Provider",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Senders E-Mail<br/>C2  - Recipients E-Mail<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Description<br/>J2  - Abbreviation<br/>NV  - Communication Number<br/>PB  - Publisher<br/>SP  - Pages<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Journal Article: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Issue",
+				"journalAbbreviation": "Alternate Journal",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Journal",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Article<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Legal Note<br/>C2  - PMCID<br/>C6  - NIHMSID<br/>C7  - Article Number<br/>ET  - Epub Date<br/>RP  - Reprint Edition<br/>SE  - Start Page<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "report",
+				"title": "Report: Title",
+				"creators": [
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "Department/Division",
+						"creatorType": "translator",
+						"fieldMode": 1
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Document Number",
+				"institution": "Institution",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"reportNumber": "Report Number",
+				"reportType": "Type",
+				"seriesTitle": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Publisher<br/>C6  - Issue<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Alternate Title<br/>NV  - Series Volume<br/>RP  - Notes<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "book",
+				"title": "Serial: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Volume EditorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Pages",
+				"numberOfVolumes": "Number of Volumes",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Secondary Title",
+				"seriesNumber": "Series Volume",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>series: Series Title<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Section<br/>C2  - Report Number<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Abbreviation<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>SE  - Chapter<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "thesis",
+				"title": "Thesis: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Document Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Number of Pages",
+				"place": "Place Published",
+				"shortTitle": "Short Title",
+				"thesisType": "Thesis Type",
+				"university": "University",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - AdvisorLast, First<br/>DO  - DOI<br/>SN  - ISBN<br/>VL  - Degree<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Unpublished Work: Title of Work",
+				"creators": [
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"issue": "Number",
+				"journalAbbreviation": "Abbreviation",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Series Title",
+				"series": "Department",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>PB  - Institution<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Podcast: Title of Podcast",
+				"creators": [
+					{
+						"lastName": "Narrator",
+						"creatorType": "editor",
+						"fieldMode": 1
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISBN/ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Number",
+				"journalAbbreviation": "Abbreviation",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Title of Show",
+				"series": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - ProducerLast, First<br/>CY  - Place Published<br/>ET  - Edition<br/>NV  - Version<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Running Time<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Press Release: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISBN/ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Number of Pages",
+				"journalAbbreviation": "Abbreviation",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Secondary Title",
+				"series": "Location of Work",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Type of Work<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - ProducerLast, First<br/>CY  - Place Published<br/>ET  - Edition<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Section<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "webpage",
+				"title": "Web Page: Title",
+				"creators": [
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Last",
+				"abstractNote": "Abstract",
+				"language": "Language",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"websiteTitle": "Series Title",
+				"websiteType": "Type of Medium",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Series EditorLast, First<br/>AN  - Accession Number<br/>C1  - Year Cited<br/>C2  - Date Cited<br/>CN  - Call Number<br/>CY  - Place Published<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - Edition<br/>J2  - Alternate Title<br/>PB  - Publisher<br/>SN  - ISBN<br/>SP  - Description<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "conferencePaper",
+				"title": "Conference Proceedings: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "SponsorLast",
+						"firstName": "First",
+						"creatorType": "contributor"
+					},
+					{
+						"lastName": "AuthorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"conferenceName": "Conference Name",
+				"extra": "Issue",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"proceedingsTitle": "Proceedings Title",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Source<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C2  - Year Published<br/>C5  - Packaging Method<br/>CY  - Conference Location<br/>ET  - Edition<br/>NV  - Issue\nNumber of Volumes<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "map",
+				"title": "Map: Title",
+				"creators": [
+					{
+						"lastName": "CartographerLast",
+						"firstName": "First",
+						"creatorType": "cartographer"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"mapType": "Type",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"scale": "Scale",
+				"seriesTitle": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Series EditorLast, First<br/>C2  - Area<br/>C3  - Size<br/>C5  - Packaging Method<br/>DO  - DOI<br/>J2  - Alternate Title<br/>RP  - Reprint Edition<br/>SP  - Description<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "audioRecording",
+				"title": "Music: Title",
+				"creators": [
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "performer"
+					},
+					{
+						"lastName": "ProducerLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "ComposerLast",
+						"firstName": "First",
+						"creatorType": "composer"
+					},
+					{
+						"lastName": "Target Audience",
+						"creatorType": "wordsBy",
+						"fieldMode": 1
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"audioRecordingFormat": "Accompanying Matter",
+				"callNumber": "Call Number",
+				"label": "Publisher",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numberOfVolumes": "Number of Volumes",
+				"place": "Place Published",
+				"seriesTitle": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - Series EditorLast, First<br/>C1  - Format of Music<br/>C2  - Form of Composition<br/>C3  - Music Parts<br/>DO  - DOI<br/>ET  - Edition<br/>M3  - Form of Item<br/>RP  - Reprint Edition<br/>SE  - Section<br/>SP  - Pages<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "artwork",
+				"title": "Chart or Table: Title",
+				"creators": [
+					{
+						"lastName": "Created ByLast",
+						"firstName": "First",
+						"creatorType": "artist"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"artworkMedium": "Type of Image",
+				"callNumber": "Call Number",
+				"extra": "Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - File, Name of<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>PB  - Publisher<br/>SP  - Description<br/>VL  - Image Size<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "document",
+				"title": "Equation: Title",
+				"creators": [
+					{
+						"lastName": "File",
+						"firstName": "Name of",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Created ByLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"publisher": "Publisher",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>M3  - Type of Image<br/>SP  - Description<br/>VL  - Image Size<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "artwork",
+				"title": "Figure: Title",
+				"creators": [
+					{
+						"lastName": "Created ByLast",
+						"firstName": "First",
+						"creatorType": "artist"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"artworkMedium": "Type of Image",
+				"callNumber": "Call Number",
+				"extra": "Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - File, Name of<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>PB  - Publisher<br/>SP  - Description<br/>VL  - Image Size<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "videoRecording",
+				"title": "Online Multimedia: Title",
+				"creators": [
+					{
+						"lastName": "Created ByLast",
+						"firstName": "First",
+						"creatorType": "director"
+					},
+					{
+						"lastName": "Year Cited",
+						"creatorType": "castMember",
+						"fieldMode": 1
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"extra": "Number of Screens",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"studio": "Distributor",
+				"url": "URL",
+				"videoRecordingFormat": "Format/Length",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Series DirectorLast, First<br/>C2  - Date Cited<br/>DO  - DOI<br/>M3  - Type of Work<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "film",
+				"title": "Film or Broadcast: Title",
+				"creators": [
+					{
+						"lastName": "ProducerLast",
+						"firstName": "First",
+						"creatorType": "producer"
+					},
+					{
+						"lastName": "PerformerLast",
+						"firstName": "First",
+						"creatorType": "contributor"
+					},
+					{
+						"lastName": "DirectorLast",
+						"firstName": "First",
+						"creatorType": "director"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Synopsis",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"distributor": "Distributor",
+				"genre": "Genre",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"runningTime": "Running Time",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"videoRecordingFormat": "Format",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Series DirectorLast, First<br/>C1  - Cast<br/>C2  - Credits<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Edition<br/>J2  - Alternate Title<br/>M3  - Medium<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "book",
+				"title": "Edited Book: Title",
+				"creators": [
+					{
+						"lastName": "Series EditorLast",
+						"firstName": "First",
+						"creatorType": "seriesEditor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "EditorLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"numPages": "Number of Pages",
+				"numberOfVolumes": "Number of Volumes",
+				"place": "Place Published",
+				"publisher": "Publisher",
+				"series": "Series Title",
+				"seriesNumber": "Series Volume",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Volume",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Editor Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C7  - Custom 7<br/>DO  - DOI<br/>J2  - Alternate Title<br/>M3  - Type of Work<br/>RP  - Reprint Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "report",
+				"title": "Standard: Title",
+				"creators": [
+					{
+						"lastName": "Institution",
+						"creatorType": "author",
+						"fieldMode": 1
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"extra": "Start Page",
+				"institution": "Publisher",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"reportNumber": "Document Number",
+				"reportType": "Type of Work",
+				"seriesTitle": "Section Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>DO  - DOI<br/>J2  - Abbreviation<br/>NV  - Session Number<br/>SE  - Section Number<br/>T3  - Paper Number<br/>VL  - Rule Number<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Interview: Title",
+				"creators": [
+					{
+						"lastName": "InterviewerLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "IntervieweeLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"ISSN": "ISBN/ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Number",
+				"journalAbbreviation": "Abbreviation",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Program",
+				"series": "Location of Work",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Format<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A3  - DirectorLast, First<br/>CY  - Place Published<br/>ET  - Edition<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>SE  - Section<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "patent",
+				"title": "Patent: Title",
+				"creators": [
+					{
+						"lastName": "InventorLast",
+						"firstName": "First",
+						"creatorType": "inventor"
+					},
+					{
+						"lastName": "Attorney/Agent",
+						"creatorType": "attorneyAgent",
+						"fieldMode": 1
+					}
+				],
+				"issueDate": "0000 Year Issue",
+				"abstractNote": "Abstract",
+				"applicationNumber": "Application Number",
+				"assignee": "Assignee",
+				"country": "Desiganted States",
+				"issuingAuthority": "Organization, Issuing",
+				"language": "Language",
+				"legalStatus": "Legal Status",
+				"pages": "Pages",
+				"patentNumber": "Patent Number",
+				"place": "Country",
+				"priorityNumbers": "Priority Numbers",
+				"references": "References",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Inventor Address: Inventor Address<br/>Caption: Caption<br/>issueDate: 0000 Date<br/>Label: Label<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>Patent Version Number: Patent Version Number<br/>A3  - International Author<br/>AN  - Accession Number<br/>CN  - Call Number<br/>DB  - Name of Database<br/>DO  - DOI<br/>DP  - Database Provider<br/>ET  - International Patent Classification<br/>M3  - Patent Type<br/>NV  - US Patent Classification<br/>SE  - International Patent Number<br/>T3  - Title, International<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "journalArticle",
+				"title": "Grant: Title of Grant",
+				"creators": [
+					{
+						"lastName": "TranslatorLast",
+						"firstName": "First",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "InvestigatorLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Deadline",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"issue": "Status",
+				"journalAbbreviation": "Abbreviation",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"publicationTitle": "Abbreviation",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"volume": "Amount Requested",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>DOI: Funding Type<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Contact Name<br/>C2  - Contact Address<br/>C3  - Contact Phone<br/>C4  - Contact Fax<br/>C5  - Funding Number<br/>C6  - CFDA Number<br/>CY  - Activity Location<br/>ET  - Requirements<br/>NV  - Amount Received<br/>PB  - Sponsoring Agency<br/>RP  - Review Date<br/>SE  - Duration of Grant<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "document",
+				"title": "Dataset: Title",
+				"creators": [
+					{
+						"lastName": "ProducerLast",
+						"firstName": "First",
+						"creatorType": "editor"
+					},
+					{
+						"lastName": "Agency",
+						"firstName": "Funding",
+						"creatorType": "translator"
+					},
+					{
+						"lastName": "InvestigatorsLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Date",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"publisher": "Distributor",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Version History<br/>Reviewed Item: Geographic Coverage<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Time Period<br/>C2  - Unit of Observation<br/>C3  - Data Type<br/>C4  - Dataset(s)<br/>CY  - Place Published<br/>DO  - DOI<br/>ET  - Version<br/>J2  - Abbreviation<br/>NV  - Study Number<br/>SE  - Original Release Date<br/>SN  - ISSN<br/>T3  - Series Title<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "computerProgram",
+				"title": "Computer Program: Title",
+				"creators": [
+					{
+						"lastName": "ProgrammerLast",
+						"firstName": "First",
+						"creatorType": "programmer"
+					}
+				],
+				"date": "0000 Year",
+				"ISBN": "ISBN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"company": "Publisher",
+				"libraryCatalog": "Database Provider",
+				"place": "Place Published",
+				"programmingLanguage": "Language",
+				"seriesTitle": "Series Title",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"version": "Version",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Content: Contents<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>A2  - Series EditorLast, First<br/>C1  - Computer<br/>DO  - DOI<br/>J2  - Alternate Title<br/>M3  - Type of Work<br/>SP  - Description<br/>VL  - Edition<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
+			},
+			{
+				"itemType": "newspaperArticle",
+				"title": "Newspaper Article: Title",
+				"creators": [
+					{
+						"lastName": "ReporterLast",
+						"firstName": "First",
+						"creatorType": "author"
+					}
+				],
+				"date": "0000 Year Issue",
+				"ISSN": "ISSN",
+				"abstractNote": "Abstract",
+				"archive": "Name of Database",
+				"archiveLocation": "Accession Number",
+				"callNumber": "Call Number",
+				"edition": "Edition",
+				"extra": "Start Page",
+				"language": "Language",
+				"libraryCatalog": "Database Provider",
+				"pages": "Pages",
+				"place": "Place Published",
+				"publicationTitle": "Newspaper",
+				"section": "Section",
+				"shortTitle": "Short Title",
+				"url": "URL",
+				"attachments": [],
+				"tags": [
+					"Keyword1",
+					"Keyword2"
+				],
+				"notes": [
+					{
+						"note": "<p>Notes</p>"
+					},
+					{
+						"note": "The following values have no corresponding Zotero field:<br/>Author Address: Author Address<br/>Caption: Caption<br/>Label: Label<br/>Original Publication: Original Publication<br/>Reviewed Item: Reviewed Item<br/>Research Notes: Research Notes<br/>Translated Author: Author, Translated<br/>Translated Title: Translated Title<br/>C1  - Column<br/>C2  - Issue<br/>DO  - DOI<br/>M3  - Type of Article<br/>NV  - Frequency<br/>PB  - Publisher<br/>RP  - Reprint Edition<br/>VL  - Volume<br/>",
+						"tags": [
+							"_RIS import"
+						]
+					}
+				],
+				"seeAlso": []
 			}
 		]
 	}
